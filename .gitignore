@@ -5,3 +5,4 @@ analysis/dex/
 build/
 *.xcresult
 DerivedData/
+analysis/axmol/
