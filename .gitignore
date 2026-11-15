@@ -1,0 +1,7 @@
+analysis/apktool/
+analysis/upstream/
+analysis/i18n-en.json
+analysis/dex/
+build/
+*.xcresult
+DerivedData/
