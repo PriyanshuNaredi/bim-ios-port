@@ -294,3 +294,28 @@ diff -rq assets analysis/apktool/assets | grep -c differ          # 17
 git log --oneline -S"set(project_version 17)" -- CMakeLists.txt   # f3e0e72a
 grep -rl "__ANDROID__" apps/axmol/main modules --include=*.cpp    # 3 files
 ```
+---
+
+## 10. Feasibility probe (engine side)
+
+Before promising anything, the toolchain was exercised:
+
+```bash
+git clone --depth 1 --branch v2.11.5.0j https://github.com/j-jorge/axmol.git  # 129 MB
+cmake -S . -B /tmp/axcon -G Xcode \
+      -DCMAKE_TOOLCHAIN_FILE=$PWD/1k/ios.cmake -DPLAT=iOS -DARCHS=arm64 -DSIMULATOR=TRUE
+```
+
+Result: the **iOS toolchain configures** — AppleClang is detected against the iOS
+simulator SDK and the cross-compile check passes. Three prerequisites stop the configure,
+all of them installable:
+
+| stop | fix | status |
+|---|---|---|
+| `axslcc` (shader compiler, pinned `1.14.0` in `1k/build.profiles`) | downloaded `axslcc-1.14.0-osx-x64` into `tools/external/axslcc`, `AX_ROOT` exported | **done**, configure moved past it |
+| `pwsh` | axmol's build helpers (`cmake/Modules/AXBuildHelpers.cmake`) refuse to configure without PowerShell, which its dependency fetcher (`1k/1kiss.ps1`) needs | requires `brew install --cask powershell` |
+| `ninja` | `setup.sh` and axmol both default to the Ninja generator | requires `brew install ninja` |
+
+So the port is not speculative: the engine's iOS toolchain works on this machine, and what
+remains is (a) two host tools, (b) an iOS build of axmol, (c) the ~250-line platform layer,
+(d) app packaging.
