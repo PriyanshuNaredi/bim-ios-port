@@ -6,3 +6,5 @@ build/
 *.xcresult
 DerivedData/
 analysis/axmol/
+analysis/axmol-v17/
+analysis/iscool-core/
