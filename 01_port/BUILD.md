@@ -121,11 +121,28 @@ appeared while getting the first frame onto the screen.
    and `prepare-tree.sh` casts the three `"slot_index" = i` assignments in the two feature
    slot jobs.
 
-4. **The build must be a production build.** Without `-DBIM_PROD_BUILD=ON` the binary
+4. **A production build is the default, and it is a switch.** Without `-DBIM_PROD_BUILD=ON` the binary
    points at `http://localhost:4210` and shows "Failed to authenticate with the business
-   server. Status -1." `build-app.sh` sets `BIM_PROD_BUILD=ON` and pins
-   `BIM_BUSINESS_SERVER_URL=https://bim-prod.jorge.st` (it is a cache variable, so leaving
-   it to the default keeps the old value in `CMakeCache.txt`).
+   server. Status -1." `build-app.sh` passes `BIM_PROD_BUILD` and `BIM_BUSINESS_SERVER_URL`
+   through as `BIM_PROD_BUILD`/`BIM_SERVER_URL` environment variables, defaulting to
+   production. Both are CMake *cache* variables, so an existing `CMakeCache.txt` keeps the
+   old value unless the flag is passed again - which is exactly how the first attempt at
+   this kept talking to localhost after the flag was added.
+
+   ```bash
+   BIM_SERVER_URL=https://bim-stage.jorge.st BIM_PROD_BUILD=OFF 01_port/tools/build-app.sh
+   ```
+
+## Dependency versions have one source of truth
+
+`build-all.sh` derives the Boost tree, tarball, package directory and reported version from
+one variable (`BOOST_VERSION`, default 1.91.0, the version the pin asks for). Earlier the
+script had been half-migrated: it downloaded 1.91.0 and printed 1.89.0, and wrote the CMake
+package into `lib/cmake/Boost-1.89.0` while pointing its include directory at the 1.91.0
+tree. It built, because the package is only a header path, but the version it advertised was
+a lie. After the cleanup, both `build/iscool-ios-<arch>/build.ninja` and
+`build/bim-ios-<arch>/build.ninja` contain exactly one Boost tree, `boost-1.91.0`, and
+`Boost_DIR` names `lib/cmake/Boost-1.91.0`.
 
 ## What is verified, and how
 

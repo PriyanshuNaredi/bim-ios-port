@@ -3,7 +3,7 @@
 #
 # Stages, in order, each skipped when its output already exists:
 #   1. engine   axmol v2.11.2.3j for the iOS simulator       -> build/axmol-ios
-#   2. boost    headers only (asio is header-only)           -> build/boost-1.91.0
+#   2. boost    headers only (asio is header-only)           -> build/boost-<version>
 #   3. prefix   jsoncpp, entt, moFileReader                   -> build/prefix
 #   4. packages the CMake package files upstream's setup would generate -> build/prefix/lib/cmake
 #   5. iscool  iscool-core 1.31.2 for the iOS simulator        -> build/prefix
@@ -25,6 +25,12 @@ prefix="$build/prefix-$archs"
 engine_build="$build/axmol-ios-$archs"
 engine_install="$build/axmol-ios-install-$archs"
 axmol="$analysis/axmol-v17"
+# Dependency versions, as pinned by the upstream commit this port follows
+# (setup/dependencies/recipes/*.sh at cfa6d5a5). Everything below derives from these.
+boost_version="${BOOST_VERSION:-1.91.0}"
+boost_slug="boost_${boost_version//./_}"
+boost_dir="$build/boost-$boost_version"
+boost_package_dir="$prefix/lib/cmake/Boost-$boost_version"
 deployment_target=17.0
 # Half the cores by default: an all-core compile has already taken this machine down with
 # a kernel spinlock timeout (the panic names UVCAssistant), so leave headroom.
@@ -82,17 +88,17 @@ PYEOF
 
 stage_boost()
 {
-  if [[ -d "$build/boost-1.91.0/boost/asio" ]]; then
-    say "boost: already extracted"
+  if [[ -d "$boost_dir/boost/asio" ]]; then
+    say "boost: $boost_version already extracted"
     return
   fi
 
-  say "boost: downloading 1.89.0"
-  curl -fsSL -o "$build/boost-1.91.0.tar.gz" \
-    https://archives.boost.io/release/1.91.0/source/boost_1_91_0.tar.gz
-  tar -xzf "$build/boost-1.91.0.tar.gz" -C "$build"
-  mv "$build/boost_1_91_0" "$build/boost-1.91.0"
-  say "boost: extracted"
+  say "boost: downloading $boost_version"
+  curl -fsSL -o "$boost_dir.tar.gz" \
+    "https://archives.boost.io/release/$boost_version/source/$boost_slug.tar.gz"
+  tar -xzf "$boost_dir.tar.gz" -C "$build"
+  mv "$build/$boost_slug" "$boost_dir"
+  say "boost: $boost_version extracted"
 }
 
 stage_jsoncpp()
@@ -179,7 +185,7 @@ stage_iscool()
     -DDEPLOYMENT_TARGET=$deployment_target \
     -DCMAKE_BUILD_TYPE=release \
     -DCMAKE_INSTALL_PREFIX="$prefix" \
-    -DBoost_DIR="$prefix/lib/cmake/Boost-1.89.0" \
+    -DBoost_DIR="$boost_package_dir" \
     -Djsoncpp_DIR="$prefix/lib/cmake/jsoncpp" \
     -DCMAKE_PREFIX_PATH="$prefix" \
     -DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=BOTH \
@@ -199,7 +205,7 @@ stage_packages()
 {
   say "packages: writing CMake package files"
   mkdir -p "$prefix/lib/cmake/axmol" "$prefix/lib/cmake/fmt" \
-           "$prefix/lib/cmake/moFileReader" "$prefix/lib/cmake/Boost-1.89.0"
+           "$prefix/lib/cmake/moFileReader" "$boost_package_dir"
 
   # The iOS headers are laid out the way upstream's `make install` lays them out:
   # <prefix>/include/axmol/... so that <axmol/math/Vec2.h> resolves.
@@ -296,24 +302,24 @@ EOF
 
   # Boost: headers only. Saying so explicitly makes iscool-locale skip Boost.Locale, which
   # needs ICU data that the iOS SDK does not ship in a form CMake can find.
-  mkdir -p "$prefix/lib/cmake/Boost-1.89.0"
-  cat >"$prefix/lib/cmake/Boost-1.89.0/BoostConfig.cmake" <<EOF
+  mkdir -p "$boost_package_dir"
+  cat >"$boost_package_dir/BoostConfig.cmake" <<EOF
 if(Boost_FIND_COMPONENTS)
   set(Boost_FOUND FALSE)
   return()
 endif()
 set(Boost_FOUND TRUE)
-set(Boost_VERSION "1.89.0")
-set(Boost_VERSION_STRING "1.89.0")
+set(Boost_VERSION "$boost_version")
+set(Boost_VERSION_STRING "$boost_version")
 if(NOT TARGET Boost::headers)
   add_library(Boost::headers INTERFACE IMPORTED)
   set_target_properties(Boost::headers PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "$build/boost-1.91.0")
+    INTERFACE_INCLUDE_DIRECTORIES "$boost_dir")
   add_library(Boost::boost ALIAS Boost::headers)
 endif()
 EOF
-  printf 'set(PACKAGE_VERSION "1.89.0")\nset(PACKAGE_VERSION_COMPATIBLE TRUE)\n' \
-    >"$prefix/lib/cmake/Boost-1.89.0/BoostConfigVersion.cmake"
+  printf 'set(PACKAGE_VERSION "%s")\nset(PACKAGE_VERSION_COMPATIBLE TRUE)\n' \
+    "$boost_version" >"$boost_package_dir/BoostConfigVersion.cmake"
 
   say "packages: done"
 }
