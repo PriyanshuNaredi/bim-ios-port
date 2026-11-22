@@ -183,7 +183,24 @@ edit(
     "iOS render view body",
 )
 
-print("   applied 6 edits")
+# 7. Json::Value has separate assignment overloads for `unsigned int` and for
+#    `unsigned long long`. On Darwin `std::size_t` is `unsigned long`, so assigning one is
+#    ambiguous there and nowhere else (Linux defines uint64_t as `unsigned long`, which
+#    makes the same line an exact match). Upstream's CI is Linux, which is why upstream
+#    never sees it.
+for relative in (
+    "modules/bim/app/main/src/bim/app/job/assign_feature_slots_job.cpp",
+    "modules/bim/app/main/src/bim/app/job/buy_feature_slot_job.cpp",
+):
+    path = root / relative
+    text = path.read_text()
+    if '["slot_index"] = i;' not in text:
+        raise SystemExit(f"patch point not found in {relative}: json slot_index")
+    path.write_text(text.replace('["slot_index"] = i;',
+                                 '["slot_index"] = Json::UInt64(i);'))
+
+print("   applied 7 edits")
 PY
 
 echo "==> done"
+
