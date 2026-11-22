@@ -319,3 +319,34 @@ all of them installable:
 So the port is not speculative: the engine's iOS toolchain works on this machine, and what
 remains is (a) two host tools, (b) an iOS build of axmol, (c) the ~250-line platform layer,
 (d) app packaging.
+
+## Correction: which commit is the APK?
+
+The first pass concluded that version 17 is upstream tag `f3e0e72a` ("Bump version to 17.").
+Running the port disproved it.
+
+**Evidence.** The APK's `assets/style/application.json` contains a `player_profile_button`
+widget in the lobby, referring to `avatar-background`, plus a `nickname-editor` section and
+a `player-name-label-path` setting. None of those exist at `f3e0e72a`: `git grep
+player_profile_button` returns nothing there, and no source file mentions the name, so the
+first game scene crashed the moment the style asked for a node the source never creates.
+
+`git log -S player_profile_button` finds the feature at `769e22cf` ("Display the player's
+nickname on the lobby.", 2026-09-17), which is **73 commits after** the version-17 tag.
+Version numbers are only bumped at release time, so every build made between the tag and
+"Bump version to 18." (`f744e54a`) is a version-17 APK, and this one is one of those.
+
+**The pin the port follows is therefore `cfa6d5a5`** — the last commit whose version is
+still 17 (parent of the version-18 bump, 2026-10-28 "Update the translations (Ukrainian)").
+
+**Dependency pins change with it** (`setup/dependencies/recipes/*.sh` at `cfa6d5a5`):
+
+| dependency     | at `f3e0e72a` | at `cfa6d5a5` |
+| -------------- | ------------- | ------------- |
+| axmol          | 2.11.2.1j     | **2.11.2.3j** |
+| boost          | 1.89.0        | **1.91.0**    |
+| iscool-core    | 1.25.1        | **1.31.2**    |
+| benchmark      | 1.9.4.0j      | 1.9.5.0j      |
+
+The lesson is recorded as a defect: a version name in the APK is not a commit, and the
+asset tree is the cheapest place to check which commit it really is.

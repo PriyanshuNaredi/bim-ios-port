@@ -1,0 +1,189 @@
+#!/bin/bash
+# Prepare an iOS build tree from the pinned upstream + this port's overlay.
+#
+# The upstream tree stays pristine in analysis/upstream (checked out at the version-17
+# commit). Everything the port changes is either a new file in overlay/ or a small,
+# explicit edit applied here, so `git diff` against the upstream pin always shows exactly
+# what the port adds.
+#
+# Usage: 01_port/tools/prepare-tree.sh [build-dir]      (default: build/ios-src)
+
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")"; pwd)"
+port_root="$(cd "$script_dir/.." && pwd)"
+repo_root="$(cd "$port_root/.." && pwd)"
+upstream="$repo_root/analysis/upstream"
+target="${1:-$repo_root/build/ios-src}"
+
+if [[ ! -d "$upstream" ]]; then
+  echo "Missing $upstream. Clone j-jorge/bim there at the version-17 commit." >&2
+  exit 1
+fi
+
+echo "==> tree: $target"
+rm -rf "$target"
+mkdir -p "$target"
+
+# The analysis clone carries our own notes; only the sources are needed.
+# The APK is version 17 but built from the *end* of the version-17 line, after the
+# "Bump version to 17" tag: its style data contains the player profile button and the
+# nickname editor, which landed on master 73 commits after the tag. The last commit
+# whose version is still 17 is the one this port must follow.
+pin="${BIM_PIN:-cfa6d5a5f66b0465e5d77a435515450947e16a9f}"
+
+git -C "$upstream" archive --format=tar "$pin" | tar -x -C "$target"
+
+echo "==> overlay"
+cp -R "$port_root/overlay/." "$target/"
+
+echo "==> patches"
+python3 - "$target" <<'PY'
+import pathlib
+import sys
+
+root = pathlib.Path(sys.argv[1])
+
+
+def edit(relative, old, new, description):
+    path = root / relative
+    text = path.read_text()
+    if old not in text:
+        raise SystemExit(f"patch point not found in {relative}: {description}")
+    path.write_text(text.replace(old, new, 1))
+
+
+# 1. The platform layer: iOS reuses the desktop implementations (mock shop, logging
+#    analytics) and overrides is_shop_supported() to false, because no StoreKit path is
+#    wired.
+edit(
+    "modules/bim/app/CMakeLists.txt",
+    """else()
+  set(platform_sources
+    desktop/src/bim/app/analytics_service.cpp
+    desktop/src/bim/app/shop_implementation.cpp
+    desktop/src/bim/app/shop_support.cpp
+  )
+  set(platform_includes desktop/include)
+endif()""",
+    """elseif(BIM_BUILDING_FOR_IOS)
+  set(platform_sources
+    desktop/src/bim/app/analytics_service.cpp
+    desktop/src/bim/app/shop_implementation.cpp
+    ios/src/bim/app/shop_support.cpp
+  )
+  set(platform_includes desktop/include)
+else()
+  set(platform_sources
+    desktop/src/bim/app/analytics_service.cpp
+    desktop/src/bim/app/shop_implementation.cpp
+    desktop/src/bim/app/shop_support.cpp
+  )
+  set(platform_includes desktop/include)
+endif()""",
+    "iOS platform branch",
+)
+
+# 2. Apps: only the iOS app, and not the CLI programs (linux/player/bot-test/server) that
+#    need boost::program_options and a terminal.
+edit(
+    "apps/CMakeLists.txt",
+    """else()
+  add_subdirectory(bot-test)
+  add_subdirectory(linux)
+  add_subdirectory(player)
+  add_subdirectory(server)
+endif()""",
+    """elseif(BIM_BUILDING_FOR_IOS)
+  add_subdirectory(ios)
+else()
+  add_subdirectory(bot-test)
+  add_subdirectory(linux)
+  add_subdirectory(player)
+  add_subdirectory(server)
+endif()""",
+    "iOS app target",
+)
+
+# 3. Assets: the generated assets need host tools (style-merger, pack-my-sprites,
+#    ImageMagick) that only upstream's setup installs. The port ships the *shipped*
+#    assets instead: the ones inside bim-17.apk, which are the output of that pipeline.
+edit(
+    "CMakeLists-common.txt",
+    """add_subdirectory(apps)
+
+add_subdirectory(assets)""",
+    """add_subdirectory(apps)
+
+# The iOS port takes the prebuilt asset directory from the APK (see ASSETS.md) instead of
+# regenerating it, so the host-only asset tools are not needed.
+if(NOT BIM_BUILDING_FOR_IOS)
+  add_subdirectory(assets)
+endif()""",
+    "prebuilt assets",
+)
+
+# 4. The server is a separate program with its own dependencies (maxminddb, ROCm-free
+#    maths, …); the app does not need it.
+edit(
+    "modules/CMakeLists.txt",
+    "add_subdirectory(bim/server)",
+    """if(NOT BIM_BUILDING_FOR_IOS)
+  add_subdirectory(bim/server)
+endif()""",
+    "server out of the app build",
+)
+
+# 5. The render view: on iOS axmol's AxmolAppController has already created it and handed
+#    it to the director before the game exists, and the desktop header (GLFW) does not
+#    compile for iOS at all. So the iOS version only sets the design resolution.
+edit(
+    "modules/axmol/display/main/src/bim/axmol/display/main_view.cpp",
+    """#ifdef __ANDROID__
+  #include <axmol/platform/android/RenderViewImpl-android.h>
+#else
+  #include <axmol/platform/RenderViewImpl.h>
+#endif""",
+    """#ifdef __ANDROID__
+  #include <axmol/platform/android/RenderViewImpl-android.h>
+#elif defined(__APPLE__)
+  #include <TargetConditionals.h>
+  #if TARGET_OS_IPHONE
+    #include <axmol/platform/ios/RenderViewImpl-ios.h>
+  #else
+    #include <axmol/platform/RenderViewImpl.h>
+  #endif
+#else
+  #include <axmol/platform/RenderViewImpl.h>
+#endif""",
+    "iOS render view header",
+)
+
+edit(
+    "modules/axmol/display/main/src/bim/axmol/display/main_view.cpp",
+    """  ax::RenderView* view = director->getRenderView();
+
+  if (view != nullptr)
+    return;""",
+    """  ax::RenderView* view = director->getRenderView();
+
+#if defined(__APPLE__) && TARGET_OS_IPHONE
+  // axmol creates the iOS render view in AxmolAppController before the game is
+  // constructed, so there is never one to create here.
+  if (view != nullptr)
+    {
+      view->setDesignResolutionSize(size.width, size.height,
+                                    ResolutionPolicy::SHOW_ALL);
+      return;
+    }
+#endif
+
+  if (view != nullptr)
+    return;""",
+    "iOS render view body",
+)
+
+print("   applied 6 edits")
+PY
+
+echo "==> done"
