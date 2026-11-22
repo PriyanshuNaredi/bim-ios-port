@@ -8,3 +8,12 @@ DerivedData/
 analysis/axmol/
 analysis/axmol-v17/
 analysis/iscool-core/
+
+# Transient build and debugging logs; the port keeps only the screenshots that prove a
+# behaviour.
+07_logs/app-build*.log
+07_logs/iscool-*.log
+07_logs/lldb*.log
+07_logs/sim-console.log
+07_logs/sim-[0-9].png
+07_logs/sim-1[0-9].png
