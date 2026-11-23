@@ -38,6 +38,13 @@ jobs:
           cmake --version
           which ninja || brew install ninja
 
+      # analysis/ is ignored, so a runner starts with no upstream sources and no assets. Fetch
+      # the pinned commits and decompile the APK that upstream publishes.
+      - name: Fetch pinned sources and assets
+        run: |
+          brew install --quiet apktool
+          ./01_port/tools/fetch-sources.sh
+
       - name: Prepare upstream tree
         run: ./01_port/tools/prepare-tree.sh
 

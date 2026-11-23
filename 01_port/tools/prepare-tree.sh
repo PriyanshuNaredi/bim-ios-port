@@ -16,8 +16,14 @@ repo_root="$(cd "$port_root/.." && pwd)"
 upstream="$repo_root/analysis/upstream"
 target="${1:-$repo_root/build/ios-src}"
 
+# A fresh clone has no analysis/ directory at all; fetch the pinned sources and the APK's
+# prebuilt assets instead of failing with an instruction to go and do it by hand.
+if [[ ! -d "$upstream" || ! -d "$repo_root/analysis/apktool/assets" ]]; then
+  "$script_dir/fetch-sources.sh"
+fi
+
 if [[ ! -d "$upstream" ]]; then
-  echo "Missing $upstream. Clone j-jorge/bim there at the version-17 commit." >&2
+  echo "Missing $upstream even after fetch-sources.sh." >&2
   exit 1
 fi
 

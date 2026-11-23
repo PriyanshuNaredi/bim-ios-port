@@ -58,6 +58,10 @@ already lost once.
 ```bash
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 
+# 0. from a fresh clone: the pinned upstream repositories and the APK's prebuilt assets
+#    (analysis/ is ignored, so it does not travel with the repository)
+./01_port/tools/fetch-sources.sh
+
 # 1. fetch the pinned upstream tree, overlay the iOS files, apply the patches
 ./01_port/tools/prepare-tree.sh
 
@@ -78,6 +82,12 @@ ARCHS=arm64 SIMULATOR=FALSE JOBS=4 ./01_port/tools/build-all.sh
 ARCHS=arm64 SIMULATOR=FALSE JOBS=4 ./01_port/tools/build-app.sh
 ./01_port/tools/make-ipa.sh
 ```
+
+`fetch-sources.sh` pulls the game at `cfa6d5a5`, axmol at `v2.11.2.3j`, iscool-core at `1.31.2`,
+jsoncpp `1.9.6`, EnTT `v3.16.0` and fpm `v1.1.1`, then decompiles `bim-17.apk` from the upstream
+release with `apktool` to get the assets the port ships. It is idempotent and `prepare-tree.sh`
+calls it if anything is missing, so a fresh clone builds with the same three commands the CI
+workflow runs.
 
 Nothing is signed: there is no Apple developer identity on this machine. An unsigned IPA
 installs through [SideStore](https://sidestore.io/) or
