@@ -54,6 +54,28 @@ fetch jsoncpp       https://github.com/open-source-parsers/jsoncpp.git 1.9.6
 fetch entt          https://github.com/skypjack/entt.git      v3.16.0
 fetch fpm           https://github.com/j-jorge/fpm.git        v1.1.1
 
+echo "==> tools"
+# axmol compiles its GLSL to Metal at build time with axslcc, and expects a prebuilt binary at
+# tools/external/axslcc/axslcc -- which is not in the axmol repository and is not created by the
+# engine's CMake. Without it the engine build dies at the first shader with code=127. The version
+# is pinned to the one this port is built against.
+axslcc="$analysis/axmol-v17/tools/external/axslcc/axslcc"
+axslcc_version="${AXSLCC_VERSION:-1.14.0}"
+if [[ ! -x "$axslcc" ]]; then
+  case "$(uname -m)" in
+    arm64) slug=osx-arm64 ;;
+    *)     slug=osx-x64 ;;
+  esac
+  mkdir -p "$(dirname "$axslcc")"
+  echo "   downloading axslcc $axslcc_version ($slug)"
+  curl -fsSL -o "$analysis/axslcc.tar.gz" \
+    "https://github.com/simdsoft/axslcc/releases/download/v$axslcc_version/axslcc-$axslcc_version-$slug.tar.gz"
+  tar -xzf "$analysis/axslcc.tar.gz" -C "$(dirname "$axslcc")"
+  rm -f "$analysis/axslcc.tar.gz"
+  chmod +x "$axslcc"
+fi
+ok "axslcc: $("$axslcc" --version 2>&1 | head -1)"
+
 echo "==> assets"
 # The prebuilt assets (atlas, style declarations, fonts, gettext catalogues, audio) exist only
 # inside the APK that upstream publishes. Decompiling it is how the port gets them: the pipeline
