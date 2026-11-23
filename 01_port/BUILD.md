@@ -69,7 +69,7 @@ written against libstdc++, where those headers arrive transitively; libc++ does 
 | --- | --- |
 | `apps/ios/main.mm` | creates the Bim! application before `UIApplicationMain` |
 | `apps/ios/GameAppController.{h,mm}` | axmol's controller does everything already |
-| `apps/ios/Info.plist` | bundle `bim.app`, display name `Bim!`, version 17 / 1700 |
+| `apps/ios/Info.plist` | bundle `bim.app`, display name `Bim!`, version 17 / 1700, `CFBundleSupportedPlatforms=iPhoneOS` |
 | `apps/ios/LaunchScreen.storyboard` | black launch screen |
 | `apps/ios/CMakeLists.txt` | `Bim.app`, assets and OpenAL framework copying |
 | `apps/ios/.../shop_support.cpp` | `is_shop_supported() == false`: no StoreKit yet, so upstream's own "shop not available on this platform" message shows |

@@ -20,6 +20,10 @@
   <string>17</string>
   <key>CFBundleVersion</key>
   <string>1700</string>
+  <key>CFBundleSupportedPlatforms</key>
+  <array>
+    <string>iPhoneOS</string>
+  </array>
   <key>CFBundleIcons</key>
   <dict>
     <key>CFBundlePrimaryIcon</key>
