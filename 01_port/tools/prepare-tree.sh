@@ -501,7 +501,97 @@ edit(
     "language popup seam includes",
 )
 
-print("   applied 26 edits")
+# 20. Pick a language without a tap, through the same confirm path the button uses, and answer
+#     the yes/no dialog it opens. Two seams because the real flow has two steps; a seam that
+#     jumped straight to switch_to_language() would skip the message popup entirely.
+edit(
+    "apps/axmol/main/src/bim/axmol/app/popup/language_popup.cpp",
+    """  m_controls->close_button->connect_to_clicked(close);""",
+    """  m_controls->close_button->connect_to_clicked(close);
+
+#if BIM_TEST_SEAMS
+  if (const char* const wanted = std::getenv("BIM_LANGUAGE"))
+    {
+      const std::string code(wanted);
+      struct entry { const char* code; iscool::language_name value; };
+      static const entry table[] = {
+        { "br_FR", iscool::language_name::br_FR },
+        { "de_DE", iscool::language_name::de_DE },
+        { "en_GB", iscool::language_name::en_GB },
+        { "es_ES", iscool::language_name::es_ES },
+        { "fr_FR", iscool::language_name::fr_FR },
+        { "kab_DZ", iscool::language_name::kab_DZ },
+        { "ko_KR", iscool::language_name::ko_KR },
+        { "oc_FR", iscool::language_name::oc_FR },
+        { "pt_PT", iscool::language_name::pt_PT },
+        { "pt_BR", iscool::language_name::pt_BR },
+        { "ru_RU", iscool::language_name::ru_RU },
+        { "tr_TR", iscool::language_name::tr_TR },
+        { "ta_IN", iscool::language_name::ta_IN },
+        { "uk_UA", iscool::language_name::uk_UA },
+      };
+
+      for (const entry& e : table)
+        if (code == e.code)
+          {
+            ax::Director::getInstance()->getScheduler()->schedule(
+                [this, language = e.value](float)
+                  { confirm_language(language); },
+                this, 0.f, 0, 12.f, false, "port-autolanguage-pick");
+            break;
+          }
+    }
+#endif""",
+    "language pick seam",
+)
+
+edit(
+    "apps/axmol/main/src/bim/axmol/app/popup/language_popup.cpp",
+    """#include <bim/axmol/app/popup/language_popup.hpp>""",
+    """#include <bim/axmol/app/popup/language_popup.hpp>
+
+#include <axmol/base/Director.h>
+#include <axmol/base/Scheduler.h>
+
+#include <cstdlib>
+#include <string>""",
+    "language pick includes",
+)
+
+# 21. Answer the yes/no dialog. The language change asks "do you really want to change the language
+#     setting?", so any automated switch stops there without this.
+edit(
+    "apps/axmol/main/src/bim/axmol/app/popup/message.cpp",
+    """void bim::axmol::app::message_popup::show_yes_no(std::string_view message)
+{
+  show(message, m_yes_no_display, m_yes_no_bounds);
+}""",
+    """void bim::axmol::app::message_popup::show_yes_no(std::string_view message)
+{
+  show(message, m_yes_no_display, m_yes_no_bounds);
+
+#if BIM_TEST_SEAMS
+  if (std::getenv("BIM_AUTOMESSAGE") != nullptr)
+    ax::Director::getInstance()->getScheduler()->schedule(
+        [this](float) { m_ok(); }, this, 0.f, 0, 1.f, false, "port-autook");
+#endif
+}""",
+    "yes-no seam",
+)
+
+edit(
+    "apps/axmol/main/src/bim/axmol/app/popup/message.cpp",
+    """#include <bim/axmol/app/popup/message.hpp>""",
+    """#include <bim/axmol/app/popup/message.hpp>
+
+#include <axmol/base/Director.h>
+#include <axmol/base/Scheduler.h>
+
+#include <cstdlib>""",
+    "yes-no seam includes",
+)
+
+print("   applied 30 edits")
 PY
 
 # 14. Keep the top row out of the notch. The Android manifest has no safe area, and the style

@@ -22,6 +22,8 @@ that ships is automation that can drive someone else's phone.
 | `BIM_AUTOPRESS` | `lobby` constructor | 4 s after the lobby is built: `shop`, `settings`, `stats`, `nickname`, `features` (opens the features screen) or `language` (settings, then the language popup 8 s after the settings popup is built) |
 | `BIM_AUTOEFFECT` | `lobby` constructor | plays the named effect (`tick`, `click`, …) through the real mixer 4 s after the lobby is built |
 | `BIM_AUTOMUTE` | `application::apply_local_preferences` | forces `music`, `effects` or `all` muted without touching the stored preference |
+| `BIM_LANGUAGE` | `language_popup` constructor | picks a locale (`es_ES`, …) 12 s later through the same confirm path the button uses |
+| `BIM_AUTOMESSAGE` | `message_popup::show_yes_no` | answers OK 1 s later, so the language change actually commits |
 | `BIM_AUDIOLOG` | `bim/axmol/audio/mixer.cpp` | appends one line per `play2d` to `$HOME/audio.log`, with the source id, so you can see whether axmol opened the file |
 
 They read `getenv` at the moment they matter, so a build with the seams compiled in behaves

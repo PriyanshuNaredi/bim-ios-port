@@ -27,9 +27,9 @@ the server-backed slot endpoints work on iOS.
 | Surface | Source | Status | Evidence |
 |---|---|---|---|
 | Settings | `settings_popup.cpp` | verified | `03_evidence/settings-safe-area.png` — music, effects, vibrations, language, links |
-| Statistics | `player_statistics_popup.cpp` | **unverified** | opened by the `stats` seam; no screenshot kept, no numbers checked |
+| Statistics | `player_statistics_popup.cpp` | verified, zero state | `03_evidence/statistics-popup.png` — games / victories / defeats / draws in pills, success rate shows a dash rather than dividing by zero. A **non-zero** account has not been observed |
 | Nickname editor | `nickname_editor_popup.cpp` | verified | the account's nickname changed server-side (`user_1097` → `user_1102`) |
-| Language | `language_popup.cpp` | verified 2026-11 | `03_evidence/language-popup.png` — 8 of the 14 shipped locales listed, current one ticked, Weblate footer |
+| Language | `language_popup.cpp` | verified | `03_evidence/language-popup.png` — 8 of the 14 shipped locales listed, current one ticked, Weblate footer; switching goes through the "change the language setting?" yes/no |
 | Message | `message.cpp` | verified | `03_evidence/no-server-dialog.png` — the offline path renders through it |
 | Debug | `debug_popup.cpp` | **out of scope** | upstream dev tool, no entry point without the debug gesture |
 
@@ -41,7 +41,7 @@ the server-backed slot endpoints work on iOS.
 | Audio mixer | `modules/axmol/audio/` | **source-level only** | `play2d` returns ids 1 and 2 for `menu.ogg` and `tick.ogg` with `BIM_AUDIOLOG`; `-1` when the file is missing. Nothing here can hear it |
 | Haptics | `iscool-core` iOS patch 0004 | **source-level only** | `UIImpactFeedbackGenerator` compiled and reached; a simulator has no motor |
 | Preferences | `iscool/preferences`, `bim/app/preference/` | verified | music/effects/vibrations/rules accepted at launch; `BIM_AUTOMUTE` proves the mute path |
-| Localization | 14 `.mo` files in `assets/i18n/` | partly | the list renders and marks the current language; **switching languages and restarting is not verified** |
+| Localization | 14 `.mo` files in `assets/i18n/` | verified | chose `es_ES` through the popup, quit, relaunched: the lobby comes back in Spanish (`03_evidence/lobby-spanish.png` — TIENDA, ESTADÍSTICAS, JUGAR EN LÍNEA) |
 | Analytics | `bim/app/analytics_service.hpp` | **unverified** | the launch event is sent from `application.cpp`; no capture of the request and no way to see the dashboard |
 | Screen rotation | `Info.plist` (portrait only) | **unverified on hardware** | the plist declares portrait only; upstream is portrait too, so this is a deliberate lock, not a port |
 | Background / foreground | `ax::Director` pause path | **unverified** | nothing has stopped and resumed this app on a real phone |
@@ -70,7 +70,7 @@ multiplayer round trip, and the CI-built artefact.
 
 Verified at source level only, and stated as such: audio, haptics.
 
-Not verified anywhere: statistics numbers, language switching, analytics, foreground/background,
+Not verified anywhere: a **non-zero** statistics account, analytics delivery, foreground/background,
 device performance, and every purchase path.
 
 ## How to re-check a row
