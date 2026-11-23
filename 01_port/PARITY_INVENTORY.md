@@ -15,7 +15,7 @@ Upstream paths are relative to `build/ios-src/` (the prepared tree from `prepare
 | Matchmaking | `matchmaking.cpp` | verified | `03_evidence/matchmaking.png`; paired with a real opponent on `bim-prod.jorge.st` |
 | Arena | `online_game.cpp` | verified | `03_evidence/live-arena.png`, `game-board.png`, `arena-safe-area.png` — d-pad and bomb not clipped |
 | End of game | `end_game.cpp` | verified | `03_evidence/end-of-game.png` — result, wallet reward, NEW GAME |
-| Features | `game_features.cpp` | verified 2026-11 | `03_evidence/features-screen.png` — 4 assigned slots, one buyable at 1,000, 19 locked, the "up to 2 features" footer, RANDOM / ERASE / back |
+| Features | `game_features.cpp` | verified, simulator + phone | `03_evidence/features-screen.png` — 4 assigned slots, one buyable at 1,000, 19 locked, the "up to 2 features" footer, RANDOM / ERASE / back. Confirmed on hardware by the owner (2026-11-23) |
 | Shop | `shop.cpp` | **not ported** | no StoreKit; the lobby shows upstream's "not available on this platform" path |
 
 Note on the features screen: the four assigned slots and their prices come from
@@ -29,7 +29,7 @@ the server-backed slot endpoints work on iOS.
 | Settings | `settings_popup.cpp` | verified | `03_evidence/settings-safe-area.png` — music, effects, vibrations, language, links |
 | Statistics | `player_statistics_popup.cpp` | **unverified** | opened by the `stats` seam; no screenshot kept, no numbers checked |
 | Nickname editor | `nickname_editor_popup.cpp` | verified | the account's nickname changed server-side (`user_1097` → `user_1102`) |
-| Language | `language_popup.cpp` | verified 2026-11 | `03_evidence/language-popup.png` — 8 of the 14 shipped locales listed, current one ticked, Weblate footer |
+| Language | `language_popup.cpp` | verified, simulator + phone | `03_evidence/language-popup.png` — 8 of the 14 shipped locales listed, current one ticked, Weblate footer. Switching confirmed on hardware by the owner (2026-11-23) |
 | Message | `message.cpp` | verified | `03_evidence/no-server-dialog.png` — the offline path renders through it |
 | Debug | `debug_popup.cpp` | **out of scope** | upstream dev tool, no entry point without the debug gesture |
 
@@ -41,7 +41,7 @@ the server-backed slot endpoints work on iOS.
 | Audio mixer | `modules/axmol/audio/` | **source-level only** | `play2d` returns ids 1 and 2 for `menu.ogg` and `tick.ogg` with `BIM_AUDIOLOG`; `-1` when the file is missing. Nothing here can hear it |
 | Haptics | `iscool-core` iOS patch 0004 | **source-level only** | `UIImpactFeedbackGenerator` compiled and reached; a simulator has no motor |
 | Preferences | `iscool/preferences`, `bim/app/preference/` | verified | music/effects/vibrations/rules accepted at launch; `BIM_AUTOMUTE` proves the mute path |
-| Localization | 14 `.mo` files in `assets/i18n/` | partly | the list renders and marks the current language; **switching languages and restarting is not verified** |
+| Localization | 14 `.mo` files in `assets/i18n/` | verified on device | the list renders, marks the current language, and switching it was confirmed on hardware; whether the choice survives a **restart** was not reported either way |
 | Analytics | `bim/app/analytics_service.hpp` | **unverified** | the launch event is sent from `application.cpp`; no capture of the request and no way to see the dashboard |
 | Screen rotation | `Info.plist` (portrait only) | **unverified on hardware** | the plist declares portrait only; upstream is portrait too, so this is a deliberate lock, not a port |
 | Background / foreground | `ax::Director` pause path | **unverified** | nothing has stopped and resumed this app on a real phone |
