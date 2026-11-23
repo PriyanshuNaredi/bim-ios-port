@@ -56,6 +56,10 @@ add_custom_command(
   COMMAND ${CMAKE_COMMAND} -E copy_if_different
           "${CMAKE_CURRENT_SOURCE_DIR}/LaunchScreen.storyboard"
           "$<TARGET_BUNDLE_DIR:bim>/LaunchScreen.storyboard"
+  # The home-screen icon set, generated from the APK's own ic_launcher by
+  # 01_port/tools/make-icons.sh. Without these the app installs with a blank icon.
+  COMMAND ${CMAKE_COMMAND} -E copy_directory
+          "${CMAKE_CURRENT_SOURCE_DIR}/icons" "$<TARGET_BUNDLE_DIR:bim>"
   # The engine's own compiled shaders (Metal bytecode for this build). The APK ships GLES
   # ones, so these overwrite them name for name.
   COMMAND ${CMAKE_COMMAND} -E copy_directory

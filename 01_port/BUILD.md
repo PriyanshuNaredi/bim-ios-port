@@ -169,6 +169,15 @@ rendering bug and it is not: an app whose launch screen iOS cannot resolve is ru
 The plist keeps the (uncompiled, but honoured for sizing) storyboard, and the lesson is
 recorded in `02_case_study` in the playbook. Portrait only, from the Android manifest.
 
+## The icon comes from the APK
+
+The APK has one bitmap icon, `res/mipmap-xxxhdpi/ic_launcher.png` (432×432), and an
+adaptive-icon XML whose background *is* the round icon — no vector, so nothing to scale
+infinitely. `01_port/tools/make-icons.sh` regenerates the flat PNG set iOS wants
+(11 files, `20@2x` … `1024`), the app CMake target copies `01_port/overlay/apps/ios/icons/`
+into the bundle, and `Info.plist` lists them under `CFBundleIcons`/
+`CFBundleIcons~ipad`. Until this existed the app installed with a blank square.
+
 ## Device build and the IPA
 
 The two build scripts take `ARCHS` and `SIMULATOR` from the environment, so a device build is
