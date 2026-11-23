@@ -40,13 +40,35 @@ jobs="${JOBS:-4}"
 mkdir -p "$build" "$logs" "$prefix/lib/cmake"
 
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
-export PATH="$HOME/.local/bin:/usr/local/bin:$PATH"
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+
+# Ninja lives under /usr/local/bin on an Intel Homebrew and /opt/homebrew/bin on Apple
+# silicon; a hard-coded path is a CI failure on the other kind of runner.
+ninja="$(command -v ninja || true)"
+if [[ -z "$ninja" ]]; then
+  echo "ninja is not on PATH; brew install ninja" >&2
+  exit 1
+fi
 export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
 
 # iscool-core's CMake only takes its iOS branches when IOS_SDK_VERSION is set.
 ios_sdk_version="$(xcrun --sdk iphonesimulator --show-sdk-version)"
 
 say() { echo "[$(date +%H:%M:%S)] $*"; }
+
+# Every stage redirects its compiler output to 07_logs. On a remote runner that means a failed
+# stage prints "exit code 1" and nothing else, so print the tail of whatever log it just wrote.
+on_error()
+{
+  local last
+  last="$(ls -t "$logs"/*.log 2>/dev/null | head -1)"
+
+  if [[ -n "$last" ]]; then
+    echo "---- last 40 lines of $last ----" >&2
+    tail -40 "$last" >&2
+  fi
+}
+trap on_error ERR
 
 stage_engine()
 {
@@ -71,7 +93,7 @@ PYEOF
 
   say "engine: configuring"
   cmake -S "$axmol" -B "$engine_build" -G Ninja \
-    -DCMAKE_MAKE_PROGRAM=/usr/local/bin/ninja \
+    -DCMAKE_MAKE_PROGRAM="$ninja" \
     -DCMAKE_TOOLCHAIN_FILE="$axmol/1k/ios.cmake" \
     -DPLAT=iOS -DARCHS=$archs -DSIMULATOR=$simulator \
     -DDEPLOYMENT_TARGET=$deployment_target \
@@ -111,7 +133,7 @@ stage_jsoncpp()
 
   say "jsoncpp: building"
   cmake -S "$analysis/jsoncpp" -B "$build/jsoncpp-ios-$archs" -G Ninja \
-    -DCMAKE_MAKE_PROGRAM=/usr/local/bin/ninja \
+    -DCMAKE_MAKE_PROGRAM="$ninja" \
     -DCMAKE_TOOLCHAIN_FILE="$axmol/1k/ios.cmake" \
     -DPLAT=iOS -DARCHS=$archs -DSIMULATOR=$simulator \
     -DDEPLOYMENT_TARGET=$deployment_target \
@@ -135,7 +157,7 @@ stage_entt()
   fi
   say "entt: installing headers"
   cmake -S "$analysis/entt" -B "$build/entt" -G Ninja \
-    -DCMAKE_MAKE_PROGRAM=/usr/local/bin/ninja \
+    -DCMAKE_MAKE_PROGRAM="$ninja" \
     -DCMAKE_INSTALL_PREFIX="$prefix" -DENTT_INSTALL=ON \
     >"$logs/entt-configure.log" 2>&1
   cmake --build "$build/entt" --target install >>"$logs/entt-configure.log" 2>&1
@@ -190,7 +212,7 @@ stage_iscool()
 
   say "iscool-core: configuring"
   cmake -S "$analysis/iscool-core/build-scripts/cmake" -B "$build/iscool-ios-$archs" -G Ninja \
-    -DCMAKE_MAKE_PROGRAM=/usr/local/bin/ninja \
+    -DCMAKE_MAKE_PROGRAM="$ninja" \
     -DCMAKE_TOOLCHAIN_FILE="$axmol/1k/ios.cmake" \
     -DPLAT=iOS -DARCHS=$archs -DSIMULATOR=$simulator \
     -DDEPLOYMENT_TARGET=$deployment_target \

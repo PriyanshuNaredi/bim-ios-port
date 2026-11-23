@@ -27,7 +27,15 @@ fi
 mkdir -p "$logs"
 
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
-export PATH="$HOME/.local/bin:/usr/local/bin:$PATH"
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+
+# Ninja lives under /usr/local/bin on an Intel Homebrew and /opt/homebrew/bin on Apple
+# silicon; a hard-coded path is a CI failure on the other kind of runner.
+ninja="$(command -v ninja || true)"
+if [[ -z "$ninja" ]]; then
+  echo "ninja is not on PATH; brew install ninja" >&2
+  exit 1
+fi
 
 # BIM_SKIP_PREPARE=1 keeps the prepared tree as it is, for when you are instrumenting a file
 # in build/ios-src by hand and do not want prepare-tree.sh to wipe it.
@@ -46,7 +54,7 @@ common_cxx_flags="-include cstddef -include cstdint -include span"
 
 echo "==> configure"
 cmake -S "$source_tree" -B "$build_dir" -G Ninja \
-  -DCMAKE_MAKE_PROGRAM=/usr/local/bin/ninja \
+  -DCMAKE_MAKE_PROGRAM="$ninja" \
   -DCMAKE_TOOLCHAIN_FILE="$axmol/1k/ios.cmake" \
   -DPLAT=iOS -DARCHS=$archs -DSIMULATOR=$simulator \
   -DDEPLOYMENT_TARGET=$deployment_target \
