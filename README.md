@@ -35,7 +35,9 @@ your store or build upstream — this repository only adds the iOS target.
 | Settings, statistics, nickname editor | done — `BIM_AUTOPRESS` seams, `01_port/TEST_SEAMS.md` |
 | Haptics on iOS | done — `iscool/core/system/ios/haptic_feedback.mm` (port patch 0004) |
 | Shop / in-app purchases | **not ported** — no StoreKit implementation, so the lobby shows the upstream "not available on this platform" dialog and offers the donation page |
-| Unsigned IPA + CI | `01_port/tools/make-ipa.sh`, `.github/workflows/unsigned-ipa.yml` |
+| Arm64 device build | done — links and packages; not run on hardware |
+| Unsigned IPA | `04_release/Bim-unsigned.ipa`, 31 MB, arm64, `bim.app` 17/1700 |
+| CI | `.github/workflows/unsigned-ipa.yml` |
 
 Verified on: Hackintosh, macOS 15.5, Xcode 16.0, iOS 18.0 simulator (iPhone 16, x86_64).
 Device builds are arm64 and have not been run on hardware.

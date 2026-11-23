@@ -88,11 +88,13 @@ Both patches are idempotent and run from `build-all.sh`.
 
 ## What this does not do yet
 
-- No StoreKit: the shop hides itself.
-- Online play is untested: it needs an upstream server (`apps/server`) and the
-  `bim-prod.jorge.st` smoke test has not been run.
-- Audio has not been heard, only linked.
-- No device build: it needs a signing identity, which this machine does not have.
+- No StoreKit, so the shop shows the upstream "not available on this platform" dialog and
+  offers the donation page instead.
+- Audio has been linked and initialised, never heard: the simulator logs
+  "OpenAL was initialized successfully ... ALSOFT 1.23.1" and the bundle carries
+  `assets/audio/{menu,tick}.ogg`, but nobody has listened.
+- Nothing has been run on hardware. The arm64 device build links and packages, but this
+  machine has no signing identity and no device.
 
 ## Four things the port had to add to run at all
 
@@ -144,17 +146,53 @@ a lie. After the cleanup, both `build/iscool-ios-<arch>/build.ninja` and
 `build/bim-ios-<arch>/build.ninja` contain exactly one Boost tree, `boost-1.91.0`, and
 `Boost_DIR` names `lib/cmake/Boost-1.91.0`.
 
+## Device build and the IPA
+
+The two build scripts take `ARCHS` and `SIMULATOR` from the environment, so a device build is
+the same pipeline with two variables changed:
+
+```bash
+ARCHS=arm64 SIMULATOR=FALSE JOBS=4 ./01_port/tools/build-all.sh
+ARCHS=arm64 SIMULATOR=FALSE JOBS=4 ./01_port/tools/build-app.sh
+OUT_DIR=04_release ./01_port/tools/make-ipa.sh
+```
+
+Two arch-specific traps, both found by the linker and neither obvious from the source:
+
+* **The prebuilt xcframeworks carry one slice per platform.** `build-all.sh` had hard-coded
+  `*/*simulator/*.a`, so a device link pulled `ios-arm64_x86_64-simulator` archives and the
+  linker stopped with "building for 'iOS', but linking in object file ... built for
+  'iOS-simulator'". It now resolves the slice from `SIMULATOR`.
+* **moFileReader is compiled by hand** (one `.cpp`, no CMake), with `--sdk iphonesimulator`
+  and a `-simulator` target triple, and its stage skipped whenever the archive already
+  existed — so `FORCE=1` silently produced the same simulator archive again. Both the SDK and
+  the triple follow `SIMULATOR` now, the object is named per arch, and the stage honours
+  `FORCE`.
+
+`make-ipa.sh` zips `Payload/` and warns if the bundle still carries `_CodeSignature`. The
+result, `Bim-unsigned.ipa`, is 31 MB, arm64, bundle id `bim.app` (the Android package name),
+version 17 / 1700, portrait only, minimum iOS 17.0.
+
 ## What is verified, and how
 
 * `Bim.app` installs and launches on the iPhone 16 simulator (iOS 18, x86_64).
 * The lobby renders from the APK's `style/application.json`: coin counter, gear, alpha
   banner, shop and statistics buttons, the profile card, the feature deck and PLAY ONLINE,
   with "24 games played in the last hour" fetched from the server.
-* Authentication against `https://bim-prod.jorge.st` succeeds and returns a nickname
-  (`user_1097` in the run recorded in `07_logs/sim-11.png`).
+* Authentication against `https://bim-prod.jorge.st` succeeds. The stronger evidence is a
+  fresh install: it registers a new account and comes back with a different nickname
+  (`user_1102`) and a fresh games-played counter, neither of which exists in the source tree.
+* A full match, unassisted: lobby → matchmaking with another player → arena with crates,
+  bombs and a running clock → "YOU LOST!" with a +10 coin reward → NEW GAME → a second match
+  (`03_evidence/`).
+* The popups behind the lobby's buttons: settings (music, sound effects, vibrations,
+  controls layout, direction kind, language, social links, version and user id), statistics,
+  the nickname editor with a native text field, and the shop's platform-unsupported dialog.
+* A gettext catalogue loads: every one of those strings comes through `ic_gettext`.
+* The arm64 device build links and packages into an unsigned IPA.
 
-Not yet verified: a match in progress (the header needs a tap, see below), audio, the
-shop (disabled on iOS: `is_shop_supported()` is false), and anything on a physical device.
+Not yet verified: audio output by ear, in-app purchases (there are none), and anything on a
+physical device.
 
 ## Playing a match without hands
 

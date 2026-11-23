@@ -143,7 +143,7 @@ stage_entt()
 
 stage_mofilereader()
 {
-  if [[ -f "$prefix/lib/libmoFileReader.a" ]]; then
+  if [[ -f "$prefix/lib/libmoFileReader.a" && "${FORCE:-0}" != "1" ]]; then
     say "mofilereader: already built"
     return
   fi
@@ -154,14 +154,24 @@ stage_mofilereader()
     echo "Configure iscool-core once (it downloads it) or fetch it from fagbokforlaget/mofilereader." >&2
     exit 1
   fi
-  local sdk
-  sdk="$(xcrun --sdk iphonesimulator --show-sdk-path)"
-  xcrun --sdk iphonesimulator clang++ -std=c++17 -O2 \
-    -isysroot "$sdk" -target $archs-apple-ios$deployment_target-simulator \
+  # moFileReader is one .cpp, so it is compiled directly rather than through CMake. The SDK and
+  # the target triple have to follow the platform: an archive built for iOS-simulator links
+  # into a device binary and the linker stops with "built for 'iOS-simulator'".
+  local sdk sdk_name suffix
+  if [[ "$simulator" == "TRUE" ]]; then
+    sdk_name=iphonesimulator
+    suffix=-simulator
+  else
+    sdk_name=iphoneos
+    suffix=
+  fi
+  sdk="$(xcrun --sdk "$sdk_name" --show-sdk-path)"
+  xcrun --sdk "$sdk_name" clang++ -std=c++17 -O2 \
+    -isysroot "$sdk" -target $archs-apple-ios$deployment_target$suffix \
     -I"$source/include" -c "$source/src/moFileReader/moFileReader.cpp" \
-    -o "$build/moFileReader.o"
-  xcrun --sdk iphonesimulator libtool -static -o "$prefix/lib/libmoFileReader.a" \
-    "$build/moFileReader.o"
+    -o "$build/moFileReader-$archs.o"
+  xcrun --sdk "$sdk_name" libtool -static -o "$prefix/lib/libmoFileReader.a" \
+    "$build/moFileReader-$archs.o"
   say "mofilereader: built"
 }
 
@@ -225,7 +235,16 @@ stage_packages()
   # xcframework archives (curl, jpeg, openssl, opus, zlib), then the system frameworks.
   local third_party
   third_party="$(ls "$engine_build"/lib/*.a | grep -v libaxmol.a | tr '\n' ';')"
-  third_party="$third_party$(ls "$axmol"/3rdparty/*/_x/lib/*/*simulator/*.a 2>/dev/null | tr '\n' ';')"
+  # The prebuilt xcframeworks ship one slice per platform. The slice has to match the target:
+  # picking the simulator archive for a device build links "built for iOS-simulator" code into
+  # an iOS binary, which the linker rejects. Nothing warns earlier.
+  local xc_slice
+  if [[ "$simulator" == "TRUE" ]]; then
+    xc_slice="ios-arm64_x86_64-simulator"
+  else
+    xc_slice="ios-arm64"
+  fi
+  third_party="$third_party$(ls "$axmol"/3rdparty/*/_x/lib/*/"$xc_slice"/*.a 2>/dev/null | tr '\n' ';')"
   # axmol builds OpenAL Soft as a dynamic framework on iOS; it must also be embedded in
   # the app bundle, which the app target does.
   third_party="$third_party$engine_build/engine/3rdparty/openal/soft_oal.framework/soft_oal;"
