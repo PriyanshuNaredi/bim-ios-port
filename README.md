@@ -46,8 +46,8 @@ your store or build upstream — this repository only adds the iOS target.
 | Home-screen icon | done — the APK's own `ic_launcher`, scaled by `01_port/tools/make-icons.sh`, `03_evidence/home-icon.png` |
 | Arm64 device build | done — links and packages; not run on hardware |
 | Top row clear of the notch | done — anchors moved in a copy of the style data, `03_evidence/lobby-safe-area.png` |
-| Unsigned IPA | `04_release/Bim-unsigned.ipa`, 31.6 MB, arm64, `bim.app` 17/1700, icon set included |
-| CI | `.github/workflows/unsigned-ipa.yml` |
+| Unsigned IPA | `04_release/Bim-unsigned.ipa`, 31.6 MB, arm64, `bim.app` 17/1700, icon set included — also built and published by CI on tag `v17-ios.1` (30.1 MB) |
+| CI | `.github/workflows/unsigned-ipa.yml` — green on `v17-ios.1`: builds arm64 from a fresh clone (fetching the pinned sources, `axslcc` and the APK's assets), packages the IPA and publishes it |
 
 Verified on: Hackintosh, macOS 15.5, Xcode 16.0, iOS 18.0 simulator (iPhone 16, x86_64).
 Device builds are arm64 and have not been run on hardware. `01_port/DEVICE_TEST.md` is the
