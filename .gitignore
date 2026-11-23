@@ -26,3 +26,5 @@ analysis/fpm/
 analysis/jsoncpp/
 analysis/mofilereader/
 07_logs/*.log
+07_logs/lldb*
+07_logs/pkg.log
