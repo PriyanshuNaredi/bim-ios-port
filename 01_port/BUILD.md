@@ -156,13 +156,17 @@ a lie. After the cleanup, both `build/iscool-ios-<arch>/build.ninja` and
 Not yet verified: a match in progress (the header needs a tap, see below), audio, the
 shop (disabled on iOS: `is_shop_supported()` is false), and anything on a physical device.
 
-## Next: play a match
+## Playing a match without hands
 
-The simulator has no input API, so the tap has to come from the host:
+The simulator has no input API, so the port carries four environment-gated seams that press
+the buttons for us: `BIM_AUTOPLAY`, `BIM_AUTOFIGHT`, `BIM_AUTORETURN`, `BIM_AUTOPRESS`. They
+are inert when unset. `01_port/TEST_SEAMS.md` documents them and what they have proven: a
+full lobby → match → death → reward → new game cycle, unassisted.
 
 ```bash
-open -a Simulator                       # the app is already installed
-# click PLAY ONLINE, then the game board should appear
+UDID=C5E1129B-3ED4-4BD0-8073-5E1FA6B8A10D
+SIMCTL_CHILD_BIM_AUTOPLAY=1 SIMCTL_CHILD_BIM_AUTOFIGHT=1 \
+SIMCTL_CHILD_BIM_AUTORETURN=1 xcrun simctl launch --console-pty "$UDID" bim.app
 ```
 
 A local server (`apps/server` from the upstream tree) is the repeatable alternative, but it
