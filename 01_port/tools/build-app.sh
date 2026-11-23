@@ -29,7 +29,11 @@ mkdir -p "$logs"
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 export PATH="$HOME/.local/bin:/usr/local/bin:$PATH"
 
-"$script_dir/prepare-tree.sh" "$source_tree" >/dev/null
+# BIM_SKIP_PREPARE=1 keeps the prepared tree as it is, for when you are instrumenting a file
+# in build/ios-src by hand and do not want prepare-tree.sh to wipe it.
+if [ -z "${BIM_SKIP_PREPARE:-}" ]; then
+  "$script_dir/prepare-tree.sh" "$source_tree" >/dev/null
+fi
 
 if [[ ! -f "$source_tree/CMakeLists.txt" ]]; then
   echo "prepared tree missing at $source_tree" >&2
