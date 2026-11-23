@@ -5,16 +5,21 @@ synthetic clicks need Accessibility permission, which this host does not grant
 (`AXIsProcessTrusted()` is false, so CGEvents are dropped). A port that cannot press its own
 buttons can only be checked up to the first screen.
 
-So the port adds four seams, all inert unless the matching environment variable is set, all
+So the port adds six seams, all inert unless the matching environment variable is set, all
 applied to the prepared tree by `prepare-tree.sh`. They are the difference between "the
 lobby renders" and "a match was played and scored".
+
+**They are compiled out of device builds.** Every seam sits inside `#if BIM_TEST_SEAMS`;
+`build-app.sh` defines it as 1 for a simulator build and 0 for a device build, and
+`make-ipa.sh` refuses to package a binary that still contains `BIM_AUTO*` strings. Automation
+that ships is automation that can drive someone else's phone.
 
 | Variable | Where | What it does |
 | --- | --- | --- |
 | `BIM_AUTOPLAY` | `lobby` constructor | presses PLAY ONLINE 3 s after the lobby is built |
-| `BIM_AUTOFIGHT` | `matchmaking::update_display_with_game_proposal` | accepts the proposal 1 s after a second player arrives |
+| `BIM_AUTOFIGHT` | `matchmaking` constructor | accepts the proposal 1 s later, on the same slot the FIGHT button uses |
 | `BIM_AUTORETURN` | `end_game::displayed` | takes the "new game" path 2 s after the result is shown |
-| `BIM_AUTOPRESS` | `lobby` constructor | presses `shop`, `settings`, `stats` or `nickname` 4 s after the lobby is built |
+| `BIM_AUTOPRESS` | `lobby` constructor | 4 s after the lobby is built: `shop`, `settings`, `stats`, `nickname`, `features` (opens the features screen) or `language` (settings, then the language popup 8 s after the settings popup is built) |
 | `BIM_AUTOEFFECT` | `lobby` constructor | plays the named effect (`tick`, `click`, …) through the real mixer 4 s after the lobby is built |
 | `BIM_AUTOMUTE` | `application::apply_local_preferences` | forces `music`, `effects` or `all` muted without touching the stored preference |
 | `BIM_AUDIOLOG` | `bim/axmol/audio/mixer.cpp` | appends one line per `play2d` to `$HOME/audio.log`, with the source id, so you can see whether axmol opened the file |
@@ -74,3 +79,20 @@ the mute branch doing its job.
 
 What that does *not* prove is audibility on a real phone — codec, route and volume are the
 device's business. That check is item 3 in `DEVICE_TEST.md`.
+
+## Two ways this file has been wrong
+
+Both are worth reading before trusting any seam here.
+
+**A seam scheduled from a constructor tests a transition the UI does not allow.** `BIM_AUTORETURN`
+was first scheduled from the `end_game` constructor, pressed NEW GAME while the match was still
+running, and produced a blank arena. It is now scheduled from `displayed()`, which is the moment
+the result is actually on screen.
+
+**This file described seams that no longer existed.** `BIM_AUTOFIGHT` and `BIM_AUTORETURN` were
+documented here for a whole round while a rewrite of `prepare-tree.sh` had silently dropped the
+edits that install them: `grep BIM_ build/ios-src/.../matchmaking.cpp` returned nothing, yet this
+table said the seam worked. The port still reached an arena during that round — because a real
+opponent accepted the match. Documentation of an automation path is worthless if nothing checks
+that the path exists; `prepare-tree.sh` now prints how many edits it applied, and the two seams
+are back with a compile-time guard.

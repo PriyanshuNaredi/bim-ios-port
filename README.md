@@ -39,7 +39,8 @@ your store or build upstream — this repository only adds the iOS target.
 | iOS app target, `Info.plist`, launch screen | done — `01_port/overlay/apps/ios/` |
 | Runs in the simulator | done — `03_evidence/lobby-simulator.png` |
 | Authenticates, joins a lobby, plays a match, scores it | done — `03_evidence/{matchmaking,game-board,end-of-game}.png` |
-| Settings, statistics, nickname editor | done — `BIM_AUTOPRESS` seams, `01_port/TEST_SEAMS.md` |
+| Settings, nickname editor, language popup, features screen | done — `01_port/PARITY_INVENTORY.md` lists each surface with its evidence |
+| Statistics popup | opens, numbers unchecked — `01_port/PARITY_INVENTORY.md` |
 | Haptics on iOS | done — `iscool/core/system/ios/haptic_feedback.mm` (port patch 0004); needs a phone to feel |
 | Music and effects reach OpenAL | done — `audio/menu.ogg` and `audio/tick.ogg` each open a live source (`01_port/TEST_SEAMS.md`); audibility needs a phone |
 | Shop / in-app purchases | **not ported** — no StoreKit implementation, so the lobby shows the upstream "not available on this platform" dialog and offers the donation page |
@@ -102,5 +103,6 @@ own Apple ID.
 
 An iOS simulator cannot be tapped from outside the app, and this host grants no Accessibility
 permission, so the port carries four environment-gated seams that press its own buttons:
-`BIM_AUTOPLAY`, `BIM_AUTOFIGHT`, `BIM_AUTORETURN`, `BIM_AUTOPRESS`. They are inert when the
+`BIM_AUTOPLAY`, `BIM_AUTOFIGHT`, `BIM_AUTORETURN`, `BIM_AUTOPRESS`. They are compiled out of
+device builds (`BIM_TEST_SEAMS=0`, and `make-ipa.sh` fails if the strings are present), and inert when the
 variables are unset. `01_port/TEST_SEAMS.md` documents them and records what they proved.

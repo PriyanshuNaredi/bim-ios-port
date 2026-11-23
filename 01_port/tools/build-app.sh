@@ -52,7 +52,17 @@ fi
 # not. This is a compiler flag rather than a source edit so the tree stays upstream-shaped.
 common_cxx_flags="-include cstddef -include cstdint -include span"
 
-echo "==> configure"
+# The test seams (BIM_AUTOPLAY and friends) are compiled in only for simulator builds. A build
+# for a phone must not carry a hidden way to drive the UI: those seams exist so a host without
+# an input API can reach the screens, and a released app has a real finger. Override with
+# BIM_TEST_SEAMS=1 to instrument a device build deliberately.
+if [ -z "${BIM_TEST_SEAMS:-}" ]; then
+  if [ "$simulator" = "TRUE" ]; then BIM_TEST_SEAMS=1; else BIM_TEST_SEAMS=0; fi
+fi
+
+common_cxx_flags="$common_cxx_flags -DBIM_TEST_SEAMS=$BIM_TEST_SEAMS"
+
+echo "==> configure (test seams: $BIM_TEST_SEAMS)"
 cmake -S "$source_tree" -B "$build_dir" -G Ninja \
   -DCMAKE_MAKE_PROGRAM="$ninja" \
   -DCMAKE_TOOLCHAIN_FILE="$axmol/1k/ios.cmake" \

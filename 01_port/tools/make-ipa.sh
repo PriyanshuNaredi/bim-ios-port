@@ -37,6 +37,14 @@ if [[ -d "$app/_CodeSignature" ]]; then
   printf 'warning: %s still has _CodeSignature\n' "$app" >&2
 fi
 
+# No automation in a shipped binary. The seams are compiled out of device builds, so the strings
+# must be absent; if they are here, something built this bundle with BIM_TEST_SEAMS=1 and the
+# app can be driven by an environment variable on someone else's phone.
+if /usr/bin/strings "$app/$name" | /usr/bin/grep -q 'BIM_AUTO'; then
+  printf 'error: %s contains test seams (BIM_AUTO*); rebuild with BIM_TEST_SEAMS=0\n' "$app/$name" >&2
+  exit 1
+fi
+
 printf 'wrote %s (%s bytes)\n' "$ipa" "$(stat -f %z "$ipa")"
 printf 'bundle: %s\n' "$(basename "$app")"
 printf 'arch:   %s\n' "$(lipo -archs "$app/$name" 2>/dev/null || echo unknown)"

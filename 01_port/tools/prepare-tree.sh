@@ -214,7 +214,8 @@ for relative in (
 edit(
     "apps/axmol/main/src/bim/axmol/app/screen/lobby.cpp",
     """  m_inputs.push_back(m_controls->play_button->input_node());""",
-    """  if (std::getenv("BIM_AUTOPLAY") != nullptr)
+    """#if BIM_TEST_SEAMS
+  if (std::getenv("BIM_AUTOPLAY") != nullptr)
     ax::Director::getInstance()->getScheduler()->schedule(
         [this](float) { play_online(); }, this, 0.f, 0, 3.f, false,
         "port-autoplay");
@@ -232,6 +233,10 @@ edit(
             {
               if (which == "shop")
                 open_shop_from_button();
+              else if (which == "features")
+                open_game_features();
+              else if (which == "language")
+                show_settings();
               else if (which == "settings")
                 show_settings();
               else if (which == "stats")
@@ -260,6 +265,75 @@ edit(
 )
 
 
+# 9. Accept the match proposal without a tap. The FIGHT button calls accept_game(); the seam
+#    does the same thing on the same signal, one second after an opponent arrives.
+edit(
+    "apps/axmol/main/src/bim/axmol/app/screen/matchmaking.cpp",
+    """  m_controls->ready_button->connect_to_clicked(
+      [this]()
+        {
+          accept_game();
+        });""",
+    """  m_controls->ready_button->connect_to_clicked(
+      [this]()
+        {
+          accept_game();
+        });
+
+#if BIM_TEST_SEAMS
+  if (std::getenv("BIM_AUTOFIGHT") != nullptr)
+    ax::Director::getInstance()->getScheduler()->schedule(
+        [this](float) { accept_game(); }, this, 0.f, 0, 1.f, false,
+        "port-autofight");
+#endif""",
+    "matchmaking seam",
+)
+
+edit(
+    "apps/axmol/main/src/bim/axmol/app/screen/matchmaking.cpp",
+    """#include <bim/axmol/app/screen/matchmaking.hpp>""",
+    """#include <bim/axmol/app/screen/matchmaking.hpp>
+
+#include <axmol/base/Director.h>
+#include <axmol/base/Scheduler.h>
+
+#include <cstdlib>""",
+    "matchmaking seam includes",
+)
+
+# 10. Take the "new game" path without a tap. Scheduled from displayed(), because the screen is
+#     constructed while the match is still running; a constructor-time schedule presses NEW GAME
+#     before a result exists and leaves a blank arena (see 01_port/TEST_SEAMS.md).
+edit(
+    "apps/axmol/main/src/bim/axmol/app/screen/end_game.cpp",
+    """void bim::axmol::app::end_game::displayed()
+{
+  m_displayed = true;""",
+    """void bim::axmol::app::end_game::displayed()
+{
+#if BIM_TEST_SEAMS
+  if (std::getenv("BIM_AUTORETURN") != nullptr)
+    ax::Director::getInstance()->getScheduler()->schedule(
+        [this](float) { dispatch_revenge(); }, this, 0.f, 0, 2.f, false,
+        "port-autoreturn");
+#endif
+
+  m_displayed = true;""",
+    "end game seam",
+)
+
+edit(
+    "apps/axmol/main/src/bim/axmol/app/screen/end_game.cpp",
+    """#include <bim/axmol/app/screen/end_game.hpp>""",
+    """#include <bim/axmol/app/screen/end_game.hpp>
+
+#include <axmol/base/Director.h>
+#include <axmol/base/Scheduler.h>
+
+#include <cstdlib>""",
+    "end game seam includes",
+)
+
 # 15. A seam for the audio check: nothing on this machine can hear the simulator, so the only
 #     way to prove music and effects reach the mixer is to render the game twice, once muted
 #     and once not, and compare. BIM_AUTOMUTE=music|effects|all forces the mute; the rest of the
@@ -271,7 +345,8 @@ edit(
 
   if (!bim::app::effects_enabled(preferences))
     audio.set_effects_muted(true);""",
-    """  const char* const automute = std::getenv("BIM_AUTOMUTE");
+    """#if BIM_TEST_SEAMS
+  const char* const automute = std::getenv("BIM_AUTOMUTE");
   const std::string muted(automute != nullptr ? automute : "");
 
   if ((!bim::app::music_enabled(preferences)) || (muted == "music")
@@ -280,7 +355,8 @@ edit(
 
   if ((!bim::app::effects_enabled(preferences)) || (muted == "effects")
       || (muted == "all"))
-    audio.set_effects_muted(true);""",
+    audio.set_effects_muted(true);
+#endif""",
     "audio mute seam",
 )
 
@@ -307,6 +383,7 @@ edit(
 #include <cstdlib>
 #include <string>
 
+#if BIM_TEST_SEAMS
 namespace bim::axmol::audio::detail
 {
   inline void audio_log(const char* kind, const std::string& path, int id)
@@ -326,7 +403,8 @@ namespace bim::axmol::audio::detail
 
     std::fclose(f);
   }
-}""",
+}
+#endif""",
     "audio log helper",
 )
 
@@ -337,7 +415,9 @@ edit(
     """  if (!m_music_muted)
     m_current_music_id = ax::AudioEngine::play2d(file_path, repeat_forever);
 
-  bim::axmol::audio::detail::audio_log("music", file_path, m_current_music_id);""",
+#if BIM_TEST_SEAMS
+  bim::axmol::audio::detail::audio_log("music", file_path, m_current_music_id);
+#endif""",
     "music log seam",
 )
 
@@ -346,7 +426,9 @@ edit(
     """  return ax::AudioEngine::play2d(file_path, false, m_effects_muted ? 0 : 1);""",
     """  const int id = ax::AudioEngine::play2d(file_path, false, m_effects_muted ? 0 : 1);
 
+#if BIM_TEST_SEAMS
   bim::axmol::audio::detail::audio_log("effect", file_path, id);
+#endif
 
   return id;""",
     "effects log seam",
@@ -359,7 +441,10 @@ edit(
 edit(
     "apps/axmol/main/src/bim/axmol/app/screen/lobby.cpp",
     """  m_inputs.push_back(m_controls->play_button->input_node());""",
-    """  if (const char* const effect = std::getenv("BIM_AUTOEFFECT"))
+    """#endif  // BIM_TEST_SEAMS
+
+#if BIM_TEST_SEAMS
+  if (const char* const effect = std::getenv("BIM_AUTOEFFECT"))
     {
       const std::string name(effect);
 
@@ -369,6 +454,7 @@ edit(
           },
           this, 0.f, 0, 4.f, false, "port-autoeffect");
     }
+#endif  // BIM_TEST_SEAMS
 
   m_inputs.push_back(m_controls->play_button->input_node());""",
     "effect seam",
@@ -384,7 +470,38 @@ edit(
     "effect seam include",
 )
 
-print("   applied 20 edits")
+# 19. Reach the language popup. It lives inside the settings popup, so the lobby seam shows the
+#     settings popup first and this opens the language selection a few seconds later, once the
+#     popup is actually on screen.
+edit(
+    "apps/axmol/main/src/bim/axmol/app/popup/settings_popup.cpp",
+    """  m_controls->language_button->connect_to_clicked(""",
+    """#if BIM_TEST_SEAMS
+  if (std::getenv("BIM_AUTOPRESS") != nullptr
+      && std::string(std::getenv("BIM_AUTOPRESS")) == "language")
+    ax::Director::getInstance()->getScheduler()->schedule(
+        [this](float) { show_language_selection(); }, this, 0.f, 0, 8.f,
+        false, "port-autolanguage");
+#endif
+
+  m_controls->language_button->connect_to_clicked(""",
+    "language popup seam",
+)
+
+edit(
+    "apps/axmol/main/src/bim/axmol/app/popup/settings_popup.cpp",
+    """#include <bim/axmol/app/popup/settings_popup.hpp>""",
+    """#include <bim/axmol/app/popup/settings_popup.hpp>
+
+#include <axmol/base/Director.h>
+#include <axmol/base/Scheduler.h>
+
+#include <cstdlib>
+#include <string>""",
+    "language popup seam includes",
+)
+
+print("   applied 26 edits")
 PY
 
 # 14. Keep the top row out of the notch. The Android manifest has no safe area, and the style
