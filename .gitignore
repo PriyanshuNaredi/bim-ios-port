@@ -11,15 +11,10 @@ analysis/iscool-core/
 
 # Transient build and debugging logs; the port keeps only the screenshots that prove a
 # behaviour.
-07_logs/app-build*.log
-07_logs/iscool-*.log
-07_logs/lldb*.log
-07_logs/sim-console.log
-07_logs/sim-[0-9].png
-07_logs/sim-1[0-9].png
-07_logs/sim-2[0-9].png
-07_logs/device-*.log
-07_logs/sim-*[a-z]*.png
+# Transient build and debugging logs; the port keeps only the screenshots that prove a
+# behaviour, and those live in 03_evidence/.
+07_logs/*
+!07_logs/.gitkeep
 04_release/
 analysis/entt/
 analysis/fpm/
@@ -28,3 +23,4 @@ analysis/mofilereader/
 07_logs/*.log
 07_logs/lldb*
 07_logs/pkg.log
+07_logs/*.png
