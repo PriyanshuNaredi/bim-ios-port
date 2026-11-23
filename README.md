@@ -9,6 +9,9 @@ The Android artefact is a build of the public source tree (see
 it is written against, and all artwork and text, rather than reimplementing them. Only the
 platform layer and the app packaging are new.
 
+This is a source-based iOS port, not a conversion of the Android APK; some Android features
+are not implemented or verified on iOS.
+
 ## Licence and credits
 
 * Game, artwork, text: **Bim! by J. Jorge** — AGPL-3.0, © the Bim! authors. This port is a
