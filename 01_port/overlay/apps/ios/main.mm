@@ -40,6 +40,7 @@ namespace
     CGRect const bounds = [[UIScreen mainScreen] bounds];
     CGFloat const scale = [[UIScreen mainScreen] scale];
 
+
     // The bridge is what gives iscool::files, iscool::http and iscool::schedule their
     // platform backends; on desktop it is created in main() before the application, and
     // without it the game dereferences a null file system while loading colors.json.

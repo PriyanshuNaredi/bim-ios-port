@@ -146,6 +146,29 @@ a lie. After the cleanup, both `build/iscool-ios-<arch>/build.ninja` and
 `build/bim-ios-<arch>/build.ninja` contain exactly one Boost tree, `boost-1.91.0`, and
 `Boost_DIR` names `lib/cmake/Boost-1.91.0`.
 
+## The notch, and the launch screen that must not be touched
+
+The Android manifest has no safe area. On iOS the style data puts the wallet, the settings
+gear, the arena timer and every popup title between 0.90 and 0.99 of the screen height, which
+is exactly behind the status bar, the Dynamic Island or the notch.
+
+Insetting the layout is the wrong fix: bim's backdrop, its 150 % pattern sprite and the four
+edge glows all bleed off screen on purpose, so a smaller canvas shows black bands. The port
+moves the *data* instead — `prepare-tree.sh` rewrites a copy of the APK's prebuilt
+`style/application.json` (into `build/assets-ios`, which `build-app.sh` points
+`BIM_PREBUILT_ASSETS_DIR` at) and lowers every `anchor.reference.y` between 0.90 and 0.99 by
+0.062, the iPhone 16 safe top as a fraction of the height. Anchors at 1.0, i.e. the bleed
+layers, are left alone. 21 anchors move; the gear lands 210 px below the top edge instead of
+at 128 px, clear of the island.
+
+The bands had a second, much nastier cause. Replacing `UILaunchStoryboardName` with the modern
+empty `UILaunchScreen` dictionary made iOS launch the app in **compatibility mode**: the whole
+game rendered into a window that excluded the safe area, with black bands top and bottom and
+the backdrop scaled up wrongly, so a giant amber glow sat over the menu. It looks like a
+rendering bug and it is not: an app whose launch screen iOS cannot resolve is run scaled.
+The plist keeps the (uncompiled, but honoured for sizing) storyboard, and the lesson is
+recorded in `02_case_study` in the playbook. Portrait only, from the Android manifest.
+
 ## Device build and the IPA
 
 The two build scripts take `ARCHS` and `SIMULATOR` from the environment, so a device build is

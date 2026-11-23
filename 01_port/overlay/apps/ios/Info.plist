@@ -30,8 +30,6 @@
   <array>
     <string>arm64</string>
   </array>
-  <!-- The Android manifest declares screenOrientation="portrait"; the layouts are built for
-       it, so other orientations would only letterbox. -->
   <key>UISupportedInterfaceOrientations</key>
   <array>
     <string>UIInterfaceOrientationPortrait</string>

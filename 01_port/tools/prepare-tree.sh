@@ -253,7 +253,57 @@ edit(
     "lobby seam includes",
 )
 
-print("   applied 13 edits")
+PY
+
+# 14. Keep the top row out of the notch. The Android manifest has no safe area, and the style
+#     data puts the wallet, the settings gear, the arena timer and every popup title at 0.90 to
+#     0.99 of the screen height - which on iOS is behind the status bar, the Dynamic Island or
+#     the notch. Insetting the whole layout is not an option: the backdrop, the pattern and the
+#     edge glows bleed off screen by design and would leave black bands. So the *data* is moved
+#     instead: every anchor between 0.90 and 0.99 is lowered by the safe top margin, and the
+#     1.0 anchors (glows, patterns, bleed layers) are left alone.
+#
+#     The APK's own prebuilt `style/application.json` is what the app reads, so the port works
+#     on a copy of the assets rather than editing the extraction in place.
+safe_top=0.062  # 59 pt of a 950 pt screen: the iPhone 16 safe-area top, as a fraction
+assets_copy="$repo_root/build/assets-ios"
+rm -rf "$assets_copy"
+cp -R "$repo_root/analysis/apktool/assets" "$assets_copy"
+
+python3 - "$assets_copy/style/application.json" "$safe_top" <<'PY'
+import json
+import sys
+
+path, safe_top = sys.argv[1], float(sys.argv[2])
+low, high = 0.90, 0.995
+
+with open(path) as f:
+    data = json.load(f)
+
+moved = []
+
+
+def walk(node, trail):
+    if isinstance(node, dict):
+        y = node.get("anchor.reference.y")
+
+        if isinstance(y, (int, float)) and low <= y <= high:
+            node["anchor.reference.y"] = round(y - safe_top, 4)
+            moved.append(trail)
+
+        for key, value in node.items():
+            walk(value, trail + "/" + key)
+    elif isinstance(node, list):
+        for value in node:
+            walk(value, trail)
+
+
+walk(data, "")
+
+with open(path, "w") as f:
+    json.dump(data, f, separators=(",", ":"))
+
+print("   moved %d anchors clear of the notch" % len(moved))
 PY
 
 echo "==> done"

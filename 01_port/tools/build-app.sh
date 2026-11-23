@@ -60,7 +60,7 @@ cmake -S "$source_tree" -B "$build_dir" -G Ninja \
   -DBIM_BUILDING_FOR_IOS=TRUE \
   -DBIM_PROD_BUILD="${BIM_PROD_BUILD:-ON}" \
   -DBIM_BUSINESS_SERVER_URL="${BIM_SERVER_URL:-https://bim-prod.jorge.st}" \
-  -DBIM_PREBUILT_ASSETS_DIR="$repo_root/analysis/apktool/assets" \
+  -DBIM_PREBUILT_ASSETS_DIR="${BIM_ASSETS_DIR:-$repo_root/build/assets-ios}" \
   -DBIM_AXMOL_SHADERS_DIR="$build/axmol-ios-$archs/runtime/axslc" \
   -DBIM_OPENAL_FRAMEWORK="$build/axmol-ios-$archs/engine/3rdparty/openal/soft_oal.framework" \
   -DBIM_BUILD_TESTS=OFF -DBIM_BUILD_BENCHMARKS=OFF -DBIM_BUILD_SERVER=OFF \
