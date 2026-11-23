@@ -12,6 +12,7 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")"; pwd)"
 repo_root="$(cd "$script_dir/../.." && pwd)"
 build="$repo_root/build"
 archs="${ARCHS:-$(uname -m)}"
+simulator="${SIMULATOR:-TRUE}"
 prefix="$build/prefix-$archs"
 axmol="$repo_root/analysis/axmol-v17"
 source_tree="$build/ios-src"
@@ -43,7 +44,7 @@ echo "==> configure"
 cmake -S "$source_tree" -B "$build_dir" -G Ninja \
   -DCMAKE_MAKE_PROGRAM=/usr/local/bin/ninja \
   -DCMAKE_TOOLCHAIN_FILE="$axmol/1k/ios.cmake" \
-  -DPLAT=iOS -DARCHS=$archs -DSIMULATOR=TRUE \
+  -DPLAT=iOS -DARCHS=$archs -DSIMULATOR=$simulator \
   -DDEPLOYMENT_TARGET=$deployment_target \
   -DCMAKE_BUILD_TYPE="${BUILD_TYPE:-Release}" \
   -DCMAKE_CXX_STANDARD=20 \

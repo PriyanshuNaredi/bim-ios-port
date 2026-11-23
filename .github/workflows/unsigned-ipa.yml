@@ -1,0 +1,84 @@
+name: Unsigned IPA
+
+# Builds the arm64 device app and packages it unsigned. The artifact is NOT installable as-is:
+# SideStore / LiveContainer re-sign it on-device with the user's own Apple ID.
+#
+# This is a from-source C++ engine build, so it is slow (several thousand translation units for
+# axmol alone). Keep the runner pinned to a known Xcode; the toolchain file needs the iOS SDK
+# layout it expects.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write   # required to create releases
+
+concurrency:
+  group: unsigned-ipa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 180
+    env:
+      JOBS: 4
+      ARCHS: arm64
+      SIMULATOR: "FALSE"
+      BUILD_TYPE: Release
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: |
+          xcodebuild -version
+          cmake --version
+          which ninja || brew install ninja
+
+      - name: Prepare upstream tree
+        run: ./01_port/tools/prepare-tree.sh
+
+      - name: Build the dependency stack
+        run: ./01_port/tools/build-all.sh
+
+      - name: Build the app
+        run: ./01_port/tools/build-app.sh
+
+      - name: Package unsigned IPA
+        env:
+          OUT_DIR: ${{ github.workspace }}/dist
+        run: ./01_port/tools/make-ipa.sh
+
+      - name: Collect artifacts
+        id: artifacts
+        run: |
+          IPA=$(ls dist/*.ipa | head -1)
+          shasum -a 256 "$IPA" > "$IPA.sha256"
+          echo "ipa=$(basename "$IPA")" >> "$GITHUB_OUTPUT"
+          {
+            echo "| File | Size | SHA-256 |"
+            echo "|---|---|---|"
+            echo "| $(basename "$IPA") | $(du -h "$IPA" | awk '{print $1}') | \`$(shasum -a 256 "$IPA" | awk '{print $1}')\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Bim-unsigned-ipa
+          path: |
+            dist/*.ipa
+            dist/*.sha256
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IPA: ${{ steps.artifacts.outputs.ipa }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "Bim! for iOS ${GITHUB_REF_NAME}" \
+            --notes "Unsigned IPA of the iOS port of Bim! (AGPL-3.0, upstream @ cfa6d5a5). Install through SideStore or LiveContainer, which re-sign it with your own Apple ID. Source is this repository; the licence text and credits travel with it." \
+            "dist/$IPA" "dist/$IPA.sha256"

@@ -21,6 +21,7 @@ logs="$repo_root/07_logs"
 # The host is x86_64 (Hackintosh), so the simulator runtime is x86_64 too; an arm64
 # simulator binary installs nowhere here.
 archs="${ARCHS:-$(uname -m)}"
+simulator="${SIMULATOR:-TRUE}"
 prefix="$build/prefix-$archs"
 engine_build="$build/axmol-ios-$archs"
 engine_install="$build/axmol-ios-install-$archs"
@@ -72,7 +73,7 @@ PYEOF
   cmake -S "$axmol" -B "$engine_build" -G Ninja \
     -DCMAKE_MAKE_PROGRAM=/usr/local/bin/ninja \
     -DCMAKE_TOOLCHAIN_FILE="$axmol/1k/ios.cmake" \
-    -DPLAT=iOS -DARCHS=$archs -DSIMULATOR=TRUE \
+    -DPLAT=iOS -DARCHS=$archs -DSIMULATOR=$simulator \
     -DDEPLOYMENT_TARGET=$deployment_target \
     -DCMAKE_BUILD_TYPE=Release \
     -DAX_ENABLE_TESTS=OFF -DAX_ENABLE_TRACY=OFF \
@@ -112,7 +113,7 @@ stage_jsoncpp()
   cmake -S "$analysis/jsoncpp" -B "$build/jsoncpp-ios-$archs" -G Ninja \
     -DCMAKE_MAKE_PROGRAM=/usr/local/bin/ninja \
     -DCMAKE_TOOLCHAIN_FILE="$axmol/1k/ios.cmake" \
-    -DPLAT=iOS -DARCHS=$archs -DSIMULATOR=TRUE \
+    -DPLAT=iOS -DARCHS=$archs -DSIMULATOR=$simulator \
     -DDEPLOYMENT_TARGET=$deployment_target \
     -DCMAKE_BUILD_TYPE=Release \
     -DJSONCPP_WITH_CMAKE_PACKAGE=ON -DJSONCPP_WITH_TESTS=OFF \
@@ -181,7 +182,7 @@ stage_iscool()
   cmake -S "$analysis/iscool-core/build-scripts/cmake" -B "$build/iscool-ios-$archs" -G Ninja \
     -DCMAKE_MAKE_PROGRAM=/usr/local/bin/ninja \
     -DCMAKE_TOOLCHAIN_FILE="$axmol/1k/ios.cmake" \
-    -DPLAT=iOS -DARCHS=$archs -DSIMULATOR=TRUE \
+    -DPLAT=iOS -DARCHS=$archs -DSIMULATOR=$simulator \
     -DDEPLOYMENT_TARGET=$deployment_target \
     -DCMAKE_BUILD_TYPE=release \
     -DCMAKE_INSTALL_PREFIX="$prefix" \

@@ -1,33 +1,83 @@
 # Bim! for iOS
 
 An iOS port of [Bim!](https://github.com/j-jorge/bim) — an open-source (AGPL-3.0)
-multiplayer online game of the last-man-standing genre — built from the upstream C++
-source at version 17, the version shipped as `bim-17.apk`.
+multiplayer, last-man-standing arcade game — built from the upstream C++ source at version 17,
+the version shipped as `bim-17.apk`.
 
 The Android artefact is a build of the public source tree (see
-[`00_recon/REA.md`](00_recon/REA.md)), so this port reuses the game itself, the
-Axmol engine it is written against, and all artwork and text, rather than
-reimplementing them. Only the platform layer and the app packaging are new.
+[`00_recon/REA.md`](00_recon/REA.md)), so this port reuses the game itself, the Axmol engine
+it is written against, and all artwork and text, rather than reimplementing them. Only the
+platform layer and the app packaging are new.
 
 ## Licence and credits
 
-* Game, artwork, text: **Bim! by J. Jorge** — AGPL-3.0, © the Bim! authors. This port is
-  a derivative work under the same licence and ships with the same licence text.
-* Engine: **Axmol** `2.11.5.0j` (the `j-jorge` fork the upstream pins).
-* Upstream: <https://github.com/j-jorge/bim> · Discord/donations links belong to the
+* Game, artwork, text: **Bim! by J. Jorge** — AGPL-3.0, © the Bim! authors. This port is a
+  derivative work under the same licence and ships with the same licence text (`LICENSE`).
+  See [`CREDITS.md`](CREDITS.md) for every dependency.
+* Engine: **Axmol** `2.11.2.3j` (the `j-jorge` fork the upstream pins).
+* Upstream: <https://github.com/j-jorge/bim>. The Discord and donation links belong to the
   author and are untouched.
 
-If you were redirected here looking for the game itself, install **Bim!** from your
-store, or build it from upstream — this repository only adds the iOS target.
+This is not an official build. If you are looking for the game itself, install **Bim!** from
+your store or build upstream — this repository only adds the iOS target.
 
 ## State
 
 | stage | status |
 |---|---|
 | REA of `bim-17.apk` | done — `00_recon/REA.md` |
-| Upstream tree pinned at version 17 | done — `analysis/upstream` @ `f3e0e72a` |
-| Desktop build that proves the tree compiles here | pending |
-| `modules/bim/app/ios` platform layer | pending |
-| Axmol `2.11.5.0j` built for iOS | pending |
-| iOS app + verification match | pending |
-| Unsigned IPA + CI | pending |
+| Upstream tree pinned at the real version-17 commit | done — `analysis/upstream` @ `cfa6d5a5` (`00_recon/DECISIONS.md` D6) |
+| Axmol `2.11.2.3j` built for iOS | done |
+| Whole dependency stack (boost, jsoncpp, EnTT, iscool-core, moFileReader) built for iOS | done |
+| iOS app target, `Info.plist`, launch screen | done — `01_port/overlay/apps/ios/` |
+| Runs in the simulator | done — `03_evidence/lobby-simulator.png` |
+| Authenticates, joins a lobby, plays a match, scores it | done — `03_evidence/{matchmaking,game-board,end-of-game}.png` |
+| Settings, statistics, nickname editor | done — `BIM_AUTOPRESS` seams, `01_port/TEST_SEAMS.md` |
+| Haptics on iOS | done — `iscool/core/system/ios/haptic_feedback.mm` (port patch 0004) |
+| Shop / in-app purchases | **not ported** — no StoreKit implementation, so the lobby shows the upstream "not available on this platform" dialog and offers the donation page |
+| Unsigned IPA + CI | `01_port/tools/make-ipa.sh`, `.github/workflows/unsigned-ipa.yml` |
+
+Verified on: Hackintosh, macOS 15.5, Xcode 16.0, iOS 18.0 simulator (iPhone 16, x86_64).
+Device builds are arm64 and have not been run on hardware.
+
+## Build
+
+Everything is scripted; `01_port/BUILD.md` explains each stage and the traps.
+`build/` must stay inside the repository — never work under `/tmp`, which this machine has
+already lost once.
+
+```bash
+export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+
+# 1. fetch the pinned upstream tree, overlay the iOS files, apply the patches
+./01_port/tools/prepare-tree.sh
+
+# 2. engine, boost, jsoncpp, EnTT, iscool-core, moFileReader (long; ~25 min at JOBS=4)
+JOBS=4 ./01_port/tools/build-all.sh
+
+# 3. the app itself, into build/bim-ios-$(uname -m)/apps/ios/Bim.app
+JOBS=4 ./01_port/tools/build-app.sh
+
+# 4. run it
+xcrun simctl install C5E1129B-3ED4-4BD0-8073-5E1FA6B8A10D \
+  build/bim-ios-$(uname -m)/apps/ios/Bim.app
+SIMCTL_CHILD_BIM_AUTOPLAY=1 SIMCTL_CHILD_BIM_AUTOFIGHT=1 \
+  xcrun simctl launch --console-pty C5E1129B-3ED4-4BD0-8073-5E1FA6B8A10D bim.app
+
+# 5. a device build and an unsigned IPA
+ARCHS=arm64 SIMULATOR=FALSE JOBS=4 ./01_port/tools/build-all.sh
+ARCHS=arm64 SIMULATOR=FALSE JOBS=4 ./01_port/tools/build-app.sh
+./01_port/tools/make-ipa.sh
+```
+
+Nothing is signed: there is no Apple developer identity on this machine. An unsigned IPA
+installs through [SideStore](https://sidestore.io/) or
+[LiveContainer](https://github.com/LiveContainer/LiveContainer), which re-sign it with your
+own Apple ID.
+
+## Testing without touches
+
+An iOS simulator cannot be tapped from outside the app, and this host grants no Accessibility
+permission, so the port carries four environment-gated seams that press its own buttons:
+`BIM_AUTOPLAY`, `BIM_AUTOFIGHT`, `BIM_AUTORETURN`, `BIM_AUTOPRESS`. They are inert when the
+variables are unset. `01_port/TEST_SEAMS.md` documents them and records what they proved.

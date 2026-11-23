@@ -213,119 +213,47 @@ edit(
         [this](float) { play_online(); }, this, 0.f, 0, 3.f, false,
         "port-autoplay");
 
-  m_inputs.push_back(m_controls->play_button->input_node());""",
-    "autoplay seam",
-)
+  // BIM_AUTOPRESS opens one of the lobby's popups, which no host can click either.
+  {
+    const char* press = std::getenv("BIM_AUTOPRESS");
 
-edit(
-    "apps/axmol/main/src/bim/axmol/app/screen/lobby.cpp",
-    "#include <axmol/2d/Label.h>",
-    """#include <axmol/2d/Label.h>
-#include <axmol/base/Director.h>
-#include <axmol/base/Scheduler.h>
-
-#include <cstdlib>""",
-    "autoplay seam includes",
-)
-
-
-# 9. The same seam one screen further: with BIM_AUTOFIGHT=1 the matchmaking screen accepts
-#    the game proposal as soon as a second player shows up, which is the only way to reach
-#    the board from a host that cannot tap.
-edit(
-    "apps/axmol/main/src/bim/axmol/app/screen/matchmaking.cpp",
-    """  update_nicknames(players);
-
-  const std::size_t player_count = players.size();""",
-    """  update_nicknames(players);
-
-  const std::size_t player_count = players.size();
-
-  if ((player_count > 1) && (std::getenv("BIM_AUTOFIGHT") != nullptr))
-    ax::Director::getInstance()->getScheduler()->schedule(
-        [this](float) { accept_game(); }, this, 0.f, 0, 1.f, false,
-        "port-autofight");""",
-    "autofight seam",
-)
-
-edit(
-    "apps/axmol/main/src/bim/axmol/app/screen/matchmaking.cpp",
-    "#include <axmol/2d/Label.h>",
-    """#include <axmol/2d/Label.h>
-#include <axmol/base/Director.h>
-#include <axmol/base/Scheduler.h>
-
-#include <cstdlib>""",
-    "autofight seam includes",
-)
-
-
-# 10. And back out again: with BIM_AUTORETURN=1 the end-of-game screen takes the "new game"
-#     path two seconds after it is shown, so a whole lobby -> match -> result -> lobby cycle
-#     can be driven without a tap.
-edit(
-    "apps/axmol/main/src/bim/axmol/app/screen/end_game.cpp",
-    """  m_displayed = true;""",
-    """  m_displayed = true;
-
-  if (std::getenv("BIM_AUTORETURN") != nullptr)
-    ax::Director::getInstance()->getScheduler()->schedule(
-        [this](float) { dispatch_revenge(); }, this, 0.f, 0, 2.f, false,
-        "port-autoreturn");""",
-    "autoreturn seam",
-)
-
-edit(
-    "apps/axmol/main/src/bim/axmol/app/screen/end_game.cpp",
-    "#include <axmol/2d/Label.h>",
-    """#include <axmol/2d/Label.h>
-#include <axmol/base/Director.h>
-#include <axmol/base/Scheduler.h>
-
-#include <cstdlib>""",
-    "autoreturn seam includes",
-)
-
-
-# 11. One more seam, for the screens behind the lobby's buttons: BIM_AUTOPRESS names the
-#     button to press (shop, settings, stats) once the lobby is shown. Each opens a different
-#     service, and on iOS the shop has no StoreKit implementation at all.
-edit(
-    "apps/axmol/main/src/bim/axmol/app/screen/lobby.cpp",
-    """void bim::axmol::app::lobby::attached()""",
-    """void bim::axmol::app::lobby::attached()""",
-    "autopress anchor",
-)
-
-edit(
-    "apps/axmol/main/src/bim/axmol/app/screen/lobby.cpp",
-    """void bim::axmol::app::lobby::displayed()
-{}""",
-    """void bim::axmol::app::lobby::displayed()
-{
-  const char* press = std::getenv("BIM_AUTOPRESS");
-
-  if (press == nullptr)
-    return;
-
-  const std::string which(press);
-
-  ax::Director::getInstance()->getScheduler()->schedule(
-      [this, which](float)
+    if (press != nullptr)
       {
-        if (which == "shop")
-          open_shop_from_button();
-        else if (which == "settings")
-          show_settings();
-        else if (which == "stats")
-          open_player_stats();
-      },
-      this, 0.f, 0, 1.f, false, "port-autopress");
-}""",
+        const std::string which(press);
+
+        ax::Director::getInstance()->getScheduler()->schedule(
+            [this, which](float)
+            {
+              if (which == "shop")
+                open_shop_from_button();
+              else if (which == "settings")
+                show_settings();
+              else if (which == "stats")
+                open_player_stats();
+              else if (which == "nickname")
+                open_nickname_editor();
+            },
+            this, 0.f, 0, 4.f, false, "port-autopress");
+      }
+  }
+
+  m_inputs.push_back(m_controls->play_button->input_node());""",
     "autopress seam",
 )
 
-print("   applied 15 edits")
+# The seams need a scheduler and getenv, which the screens do not otherwise include.
+edit(
+    "apps/axmol/main/src/bim/axmol/app/screen/lobby.cpp",
+    "#include <axmol/2d/Label.h>",
+    """#include <axmol/2d/Label.h>
+#include <axmol/base/Director.h>
+#include <axmol/base/Scheduler.h>
+
+#include <cstdlib>""",
+    "lobby seam includes",
+)
+
+print("   applied 13 edits")
 PY
 
 echo "==> done"

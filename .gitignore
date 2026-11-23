@@ -17,3 +17,12 @@ analysis/iscool-core/
 07_logs/sim-console.log
 07_logs/sim-[0-9].png
 07_logs/sim-1[0-9].png
+07_logs/sim-2[0-9].png
+07_logs/device-*.log
+07_logs/sim-*[a-z]*.png
+04_release/
+analysis/entt/
+analysis/fpm/
+analysis/jsoncpp/
+analysis/mofilereader/
+07_logs/*.log
