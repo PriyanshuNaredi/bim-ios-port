@@ -39,7 +39,7 @@ your store or build upstream — this repository only adds the iOS target.
 | iOS app target, `Info.plist`, launch screen | done — `01_port/overlay/apps/ios/` |
 | Runs in the simulator | done — `03_evidence/lobby-simulator.png` |
 | Authenticates, joins a lobby, plays a match, scores it | done — `03_evidence/{matchmaking,game-board,end-of-game}.png` |
-| Settings, nickname editor, language popup, features screen | done, and confirmed on a phone — `01_port/PARITY_INVENTORY.md` lists each surface with its evidence |
+| Settings, nickname editor, language popup, features screen | done — `01_port/PARITY_INVENTORY.md` lists each surface with its evidence |
 | Statistics popup | opens, numbers unchecked — `01_port/PARITY_INVENTORY.md` |
 | Haptics on iOS | done — `iscool/core/system/ios/haptic_feedback.mm` (port patch 0004); needs a phone to feel |
 | Music and effects reach OpenAL | done — `audio/menu.ogg` and `audio/tick.ogg` each open a live source (`01_port/TEST_SEAMS.md`); audibility needs a phone |

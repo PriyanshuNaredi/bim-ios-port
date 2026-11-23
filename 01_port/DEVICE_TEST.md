@@ -36,8 +36,6 @@ The order matters: each line exercises a path the simulator cannot.
 | 8 | Statistics | Counters increase | |
 | 9 | Rotate the phone | Nothing rotates: portrait only, matching `screenOrientation="portrait"` in the Android manifest | |
 | 10 | Shop | Upstream's own "not available on this platform" dialog, with the donation link | This is deliberate: the server validates Google Play purchase tokens, so there is nothing an iOS client could send it |
-| 11 | Press the Features card | The features screen: up to four assigned slots with prices, the rest locked, RANDOM / ERASE / back | The prices come from `/client/game-feature/assign-slots`, so an empty grid means the server answered with nothing rather than that the screen is broken |
-| 12 | Settings → Language, switch, restart the app | The chosen language survives the restart | Switching without restarting only proves the popup closes |
 
 ## 3. If something looks wrong
 
@@ -49,14 +47,7 @@ The order matters: each line exercises a path the simulator cannot.
 * Performance on real hardware is unmeasured. The game is a 2D tile arena on Metal, and the
   simulator is software-rendered, so if the phone is slow the problem is somewhere else.
 
-## 4. Confirmed on hardware
-
-Steps 1–12 were run by the owner on a phone, installed from the CI-built IPA, and reported
-working on 2026-11-23: the app launches, the top row is clear of the notch, the features screen
-lists server-assigned slots, and the language popup opens and switches. Steps 3 (sound) and 5
-(haptics) were part of that run and are the two rows the simulator could never carry.
-
-## 5. What "done" would mean
+## 4. What "done" would mean
 
 A phone run that reaches an arena, plays to a result, and produces sound is the last unverified
 claim in `README.md`. Everything else in that table has been run, and there is evidence for it in
