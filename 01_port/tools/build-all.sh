@@ -10,7 +10,8 @@
 #
 # Usage: 01_port/tools/build-all.sh [stage ...]     (default: all stages)
 
-set -euo pipefail
+# -E so the ERR trap also fires inside the stage functions.
+set -Eeuo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")"; pwd)"
 port_root="$(cd "$script_dir/.." && pwd)"
