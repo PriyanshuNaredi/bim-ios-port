@@ -9,18 +9,13 @@ analysis/axmol/
 analysis/axmol-v17/
 analysis/iscool-core/
 
-# Transient build and debugging logs; the port keeps only the screenshots that prove a
-# behaviour.
+analysis/entt/
+analysis/fpm/
+analysis/jsoncpp/
+analysis/mofilereader/
+
 # Transient build and debugging logs; the port keeps only the screenshots that prove a
 # behaviour, and those live in 03_evidence/.
 07_logs/*
 !07_logs/.gitkeep
 04_release/
-analysis/entt/
-analysis/fpm/
-analysis/jsoncpp/
-analysis/mofilereader/
-07_logs/*.log
-07_logs/lldb*
-07_logs/pkg.log
-07_logs/*.png
