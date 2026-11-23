@@ -14,7 +14,10 @@ lobby renders" and "a match was played and scored".
 | `BIM_AUTOPLAY` | `lobby` constructor | presses PLAY ONLINE 3 s after the lobby is built |
 | `BIM_AUTOFIGHT` | `matchmaking::update_display_with_game_proposal` | accepts the proposal 1 s after a second player arrives |
 | `BIM_AUTORETURN` | `end_game::displayed` | takes the "new game" path 2 s after the result is shown |
-| `BIM_AUTOPRESS` | `lobby::displayed` | presses `shop`, `settings` or `stats` 1 s after the lobby is shown |
+| `BIM_AUTOPRESS` | `lobby` constructor | presses `shop`, `settings`, `stats` or `nickname` 4 s after the lobby is built |
+| `BIM_AUTOEFFECT` | `lobby` constructor | plays the named effect (`tick`, `click`, …) through the real mixer 4 s after the lobby is built |
+| `BIM_AUTOMUTE` | `application::apply_local_preferences` | forces `music`, `effects` or `all` muted without touching the stored preference |
+| `BIM_AUDIOLOG` | `bim/axmol/audio/mixer.cpp` | appends one line per `play2d` to `$HOME/audio.log`, with the source id, so you can see whether axmol opened the file |
 
 They read `getenv` at the moment they matter, so a build with the seams compiled in behaves
 exactly like a plain build when the variables are unset. Launch them through the simulator
@@ -48,3 +51,26 @@ the result existed and left the arena blank and oversized
 (`07_logs/sim-27.png`). It now hangs off `displayed()`, which is the same moment a player
 could press the button. Worth remembering: a seam scheduled from a constructor tests a state
 transition the UI does not allow.
+
+## The seams that exist only because nothing here can hear
+
+The simulator's audio goes to the host, and this host's speaker does not reach its microphone:
+`afplay /System/Library/Sounds/Glass.aiff` and the game's menu music both leave the mic at the
+same floor (`rms≈0.008`, peak matched), so a recording proves nothing either way. Rather than
+claim "audio works, trust me", the port checks the layer underneath:
+
+```bash
+SIMCTL_CHILD_BIM_AUDIOLOG=1 SIMCTL_CHILD_BIM_AUTOEFFECT=tick xcrun simctl launch "$UDID" bim.app
+# then, from the app's container:
+#   music audio/menu.ogg id=1
+#   effect audio/tick.ogg id=2
+```
+
+An id other than `-1` is not a guess. `ax::AudioEngine::play2d` returns
+`INVALID_AUDIO_ID` if the file is missing, if `lazyInit()` fails, or if the backend cannot create
+a player; so `id=1` means the OGG was found, decoded and handed to OpenAL as a live source. Run
+with `BIM_AUTOMUTE=all` and the same line reads `music audio/menu.ogg id=-1 (FAILED)`, which is
+the mute branch doing its job.
+
+What that does *not* prove is audibility on a real phone — codec, route and volume are the
+device's business. That check is item 3 in `DEVICE_TEST.md`.

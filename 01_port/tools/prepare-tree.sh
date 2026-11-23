@@ -253,6 +253,132 @@ edit(
     "lobby seam includes",
 )
 
+
+# 15. A seam for the audio check: nothing on this machine can hear the simulator, so the only
+#     way to prove music and effects reach the mixer is to render the game twice, once muted
+#     and once not, and compare. BIM_AUTOMUTE=music|effects|all forces the mute; the rest of the
+#     pipeline (assets, OpenAL, mixer) is untouched.
+edit(
+    "apps/axmol/main/src/bim/axmol/app/application.cpp",
+    """  if (!bim::app::music_enabled(preferences))
+    audio.set_music_muted(true);
+
+  if (!bim::app::effects_enabled(preferences))
+    audio.set_effects_muted(true);""",
+    """  const char* const automute = std::getenv("BIM_AUTOMUTE");
+  const std::string muted(automute != nullptr ? automute : "");
+
+  if ((!bim::app::music_enabled(preferences)) || (muted == "music")
+      || (muted == "all"))
+    audio.set_music_muted(true);
+
+  if ((!bim::app::effects_enabled(preferences)) || (muted == "effects")
+      || (muted == "all"))
+    audio.set_effects_muted(true);""",
+    "audio mute seam",
+)
+
+edit(
+    "apps/axmol/main/src/bim/axmol/app/application.cpp",
+    """#include <bim/app/preference/haptic.hpp>""",
+    """#include <bim/app/preference/haptic.hpp>
+
+#include <cstdlib>
+#include <string>""",
+    "audio seam includes",
+)
+
+# 16. No machine here can hear the simulator: the built-in speaker does not reach the built-in
+#     microphone (afplay and the game's music both leave the mic at the same floor), so the
+#     audio claim is checked one level down -- did axmol open the OGG and hand OpenAL a live
+#     source? BIM_AUDIOLOG appends one line per play to $HOME/audio.log. Inert when unset.
+edit(
+    "modules/axmol/audio/main/src/bim/axmol/audio/mixer.cpp",
+    """#include <axmol/audio/AudioEngine.h>""",
+    """#include <axmol/audio/AudioEngine.h>
+
+#include <cstdio>
+#include <cstdlib>
+#include <string>
+
+namespace bim::axmol::audio::detail
+{
+  inline void audio_log(const char* kind, const std::string& path, int id)
+  {
+    if (std::getenv("BIM_AUDIOLOG") == nullptr)
+      return;
+
+    const char* const home = std::getenv("HOME");
+    const std::string file(std::string(home != nullptr ? home : ".") + "/audio.log");
+    FILE* f = std::fopen(file.c_str(), "a");
+
+    if (f == nullptr)
+      return;
+
+    std::fprintf(f, "%s %s id=%d%s\\n", kind, path.c_str(), id,
+                 id == ax::AudioEngine::INVALID_AUDIO_ID ? " (FAILED)" : "");
+
+    std::fclose(f);
+  }
+}""",
+    "audio log helper",
+)
+
+edit(
+    "modules/axmol/audio/main/src/bim/axmol/audio/mixer.cpp",
+    """  if (!m_music_muted)
+    m_current_music_id = ax::AudioEngine::play2d(file_path, repeat_forever);""",
+    """  if (!m_music_muted)
+    m_current_music_id = ax::AudioEngine::play2d(file_path, repeat_forever);
+
+  bim::axmol::audio::detail::audio_log("music", file_path, m_current_music_id);""",
+    "music log seam",
+)
+
+edit(
+    "modules/axmol/audio/main/src/bim/axmol/audio/mixer.cpp",
+    """  return ax::AudioEngine::play2d(file_path, false, m_effects_muted ? 0 : 1);""",
+    """  const int id = ax::AudioEngine::play2d(file_path, false, m_effects_muted ? 0 : 1);
+
+  bim::axmol::audio::detail::audio_log("effect", file_path, id);
+
+  return id;""",
+    "effects log seam",
+)
+
+# 17. The effects channel needs its own lever. In the arena nothing is clicked, because the
+#     seams call the handlers directly, so no click sound is ever requested. BIM_AUTOEFFECT
+#     plays one named effect through the real mixer after the lobby settles, which proves the
+#     asset, the mixer and OpenAL, leaving only the (engine, not port) click-to-sound mapping.
+edit(
+    "apps/axmol/main/src/bim/axmol/app/screen/lobby.cpp",
+    """  m_inputs.push_back(m_controls->play_button->input_node());""",
+    """  if (const char* const effect = std::getenv("BIM_AUTOEFFECT"))
+    {
+      const std::string name(effect);
+
+      ax::Director::getInstance()->getScheduler()->schedule(
+          [name](float) {
+            iscool::audio::play_effect(name, iscool::audio::loop_mode::once);
+          },
+          this, 0.f, 0, 4.f, false, "port-autoeffect");
+    }
+
+  m_inputs.push_back(m_controls->play_button->input_node());""",
+    "effect seam",
+)
+
+edit(
+    "apps/axmol/main/src/bim/axmol/app/screen/lobby.cpp",
+    """#include <bim/axmol/find_child_by_path.hpp>""",
+    """#include <bim/axmol/find_child_by_path.hpp>
+
+#include <iscool/audio/default_effect_player.hpp>
+#include <iscool/audio/loop_mode.hpp>""",
+    "effect seam include",
+)
+
+print("   applied 20 edits")
 PY
 
 # 14. Keep the top row out of the notch. The Android manifest has no safe area, and the style
