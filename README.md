@@ -12,6 +12,10 @@ platform layer and the app packaging are new.
 This is a source-based iOS port, not a conversion of the Android APK; some Android features
 are not implemented or verified on iOS.
 
+| lobby | arena | matchmaking |
+| --- | --- | --- |
+| ![lobby](03_evidence/lobby-safe-area.png) | ![arena](03_evidence/game-board.png) | ![matchmaking](03_evidence/matchmaking.png) |
+
 ## Licence and credits
 
 * Game, artwork, text: **Bim! by J. Jorge** — AGPL-3.0, © the Bim! authors. This port is a
