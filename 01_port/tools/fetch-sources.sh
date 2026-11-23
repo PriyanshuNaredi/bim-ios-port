@@ -54,6 +54,21 @@ fetch jsoncpp       https://github.com/open-source-parsers/jsoncpp.git 1.9.6
 fetch entt          https://github.com/skypjack/entt.git      v3.16.0
 fetch fpm           https://github.com/j-jorge/fpm.git        v1.1.1
 
+# iscool-core's iOS build compiles moFileReader from a directory it expects to exist inside its
+# own build tree (build/ios/mofilereader-src), which it normally downloads during its desktop
+# setup. A fresh clone has neither the directory nor the downloader, so fetch it here.
+mofile="$analysis/iscool-core/build/ios/mofilereader-src"
+if [[ ! -f "$mofile/include/moFileReader.h" ]]; then
+  echo "   fetching moFileReader for iscool-core"
+  rm -rf "$mofile"
+  mkdir -p "$mofile"
+  git -C "$mofile" init --quiet
+  git -C "$mofile" remote add origin https://github.com/j-jorge/mofilereader
+  git -C "$mofile" fetch --quiet --depth 1 origin v1.2
+  git -C "$mofile" checkout --quiet FETCH_HEAD
+fi
+ok "moFileReader: $(git -C "$mofile" describe --tags --always 2>/dev/null || echo present)"
+
 echo "==> tools"
 # axmol compiles its GLSL to Metal at build time with axslcc, and expects a prebuilt binary at
 # tools/external/axslcc/axslcc -- which is not in the axmol repository and is not created by the
