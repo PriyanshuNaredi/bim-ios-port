@@ -42,7 +42,7 @@ the server-backed slot endpoints work on iOS.
 | Haptics | `iscool-core` iOS patch 0004 | **source-level only** | `UIImpactFeedbackGenerator` compiled and reached; a simulator has no motor |
 | Preferences | `iscool/preferences`, `bim/app/preference/` | verified | music/effects/vibrations/rules accepted at launch; `BIM_AUTOMUTE` proves the mute path |
 | Localization | 14 `.mo` files in `assets/i18n/` | verified | chose `es_ES` through the popup, quit, relaunched: the lobby comes back in Spanish (`03_evidence/lobby-spanish.png` — TIENDA, ESTADÍSTICAS, JUGAR EN LÍNEA) |
-| Analytics | `bim/app/analytics_service.hpp` | **unverified** | the launch event is sent from `application.cpp`; no capture of the request and no way to see the dashboard |
+| Analytics | `bim/app/analytics_service.hpp` | events emitted | `Documents/log.txt` shows `Event 'button', id='play' where='lobby'` and `Screen 'matchmaking'`; whether the POST reaches the collector is not observed (no `BIM_NETLOG` yet) |
 | Screen rotation | `Info.plist` (portrait only) | **unverified on hardware** | the plist declares portrait only; upstream is portrait too, so this is a deliberate lock, not a port |
 | Background / foreground | `ax::Director` pause path | **unverified** | nothing has stopped and resumed this app on a real phone |
 
@@ -55,7 +55,7 @@ in this port called it and the result was observed.
 |---|---|---|
 | `/client/authenticate` | launch | exercised — account created, nickname returned |
 | `/client/me` | launch | exercised |
-| `/client/config` | launch | **403 for this client** (same as the APK's build; the app falls back to defaults) |
+| `/client/config` | launch | exercised — `fetch_config_job Config updated.` in the log of 2026-11-23; one earlier session got a 403, so the endpoint is inconsistent rather than denied |
 | `/client/game-feature/assign-slots` | features screen | exercised — four slots with prices |
 | `/client/game-feature/buy-slot`, `/buy-feature`, `/clear-slot` | features screen | present, **not exercised** (would spend coins from a live account) |
 | `/client/account/update-nickname` | nickname editor | exercised |
