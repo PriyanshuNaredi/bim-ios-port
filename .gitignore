@@ -19,3 +19,6 @@ analysis/mofilereader/
 07_logs/*
 !07_logs/.gitkeep
 04_release/
+
+# The APK is downloaded by fetch-sources.sh, never stored.
+analysis/*.apk
