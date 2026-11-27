@@ -92,6 +92,12 @@ was first scheduled from the `end_game` constructor, pressed NEW GAME while the 
 running, and produced a blank arena. It is now scheduled from `displayed()`, which is the moment
 the result is actually on screen.
 
+**A guard at scheduling time is not a guard at fire time.** `BIM_AUTOFIGHT` now checks
+`player_count >= 2` and `!is_launch_state()` before scheduling the 1-second accept, but the
+accept itself runs a second later. An opponent who leaves inside that second means `accept_game()`
+fires with no encounter — the same `idle -> accept_random` error, once per bad race. A run has not
+caught that yet, because it needs an opponent to leave at the right moment.
+
 **This file described seams that no longer existed.** `BIM_AUTOFIGHT` and `BIM_AUTORETURN` were
 documented here for a whole round while a rewrite of `prepare-tree.sh` had silently dropped the
 edits that install them: `grep BIM_ build/ios-src/.../matchmaking.cpp` returned nothing, yet this
