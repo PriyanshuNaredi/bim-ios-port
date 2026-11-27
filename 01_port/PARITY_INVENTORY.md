@@ -15,19 +15,20 @@ Upstream paths are relative to `build/ios-src/` (the prepared tree from `prepare
 | Matchmaking | `matchmaking.cpp` | verified | `03_evidence/matchmaking.png`; paired with a real opponent on `bim-prod.jorge.st` |
 | Arena | `online_game.cpp` | verified | `03_evidence/live-arena.png`, `game-board.png`, `arena-safe-area.png` — d-pad and bomb not clipped |
 | End of game | `end_game.cpp` | verified | `03_evidence/end-of-game.png` — result, wallet reward, NEW GAME |
-| Features | `game_features.cpp` | verified 2026-11 | `03_evidence/features-screen.png` — 4 assigned slots, one buyable at 1,000, 19 locked, the "up to 2 features" footer, RANDOM / ERASE / back |
+| Features | `game_features.cpp` | verified | `03_evidence/features-screen.png` — 4 assigned slots, one buyable at 1,000, 19 locked, the "up to 2 features" footer, RANDOM / ERASE / back. The catalogue and prices arrive in `/client/config`; the player's own slots come with the profile; `/client/game-feature/*` is only called when a slot is changed |
 | Shop | `shop.cpp` | **not ported** | no StoreKit; the lobby shows upstream's "not available on this platform" path |
 
-Note on the features screen: the four assigned slots and their prices come from
-`/client/game-feature/assign-slots` on the production server, so this row is also evidence that
-the server-backed slot endpoints work on iOS.
+Note on the features screen: the prices and the locked/assigned split are server data, so the row
+is evidence that the config and profile endpoints work on iOS. It is **not** evidence for
+`/client/game-feature/*`: the network log shows no request from that family when the screen opens
+(`03_evidence/net-log.txt`), which corrected an earlier claim in this file.
 
 ## Popups — `apps/axmol/main/src/bim/axmol/app/popup/`
 
 | Surface | Source | Status | Evidence |
 |---|---|---|---|
 | Settings | `settings_popup.cpp` | verified | `03_evidence/settings-safe-area.png` — music, effects, vibrations, language, links |
-| Statistics | `player_statistics_popup.cpp` | verified, zero state | `03_evidence/statistics-popup.png` — games / victories / defeats / draws in pills, success rate shows a dash rather than dividing by zero. A **non-zero** account has not been observed |
+| Statistics | `player_statistics_popup.cpp` | verified with data | `03_evidence/statistics-played.png` — after a real match: Games 1, Defeats 1, Victories 0, Draws 0, success rate **0%** (the gauge shows a dash only when there are no games, `03_evidence/statistics-popup.png`) |
 | Nickname editor | `nickname_editor_popup.cpp` | verified | the account's nickname changed server-side (`user_1097` → `user_1102`) |
 | Language | `language_popup.cpp` | verified | `03_evidence/language-popup.png` — 8 of the 14 shipped locales listed, current one ticked, Weblate footer; switching goes through the "change the language setting?" yes/no |
 | Message | `message.cpp` | verified | `03_evidence/no-server-dialog.png` — the offline path renders through it |
@@ -42,7 +43,7 @@ the server-backed slot endpoints work on iOS.
 | Haptics | `iscool-core` iOS patch 0004 | **source-level only** | `UIImpactFeedbackGenerator` compiled and reached; a simulator has no motor |
 | Preferences | `iscool/preferences`, `bim/app/preference/` | verified | music/effects/vibrations/rules accepted at launch; `BIM_AUTOMUTE` proves the mute path |
 | Localization | 14 `.mo` files in `assets/i18n/` | verified | chose `es_ES` through the popup, quit, relaunched: the lobby comes back in Spanish (`03_evidence/lobby-spanish.png` — TIENDA, ESTADÍSTICAS, JUGAR EN LÍNEA) |
-| Analytics | `bim/app/analytics_service.hpp` | events emitted | `Documents/log.txt` shows `Event 'button', id='play' where='lobby'` and `Screen 'matchmaking'`; whether the POST reaches the collector is not observed (no `BIM_NETLOG` yet) |
+| Analytics | `bim/app/analytics_service.hpp` | events emitted, no HTTP | the log shows `Event 'button', id='play' where='lobby'`, `Screen 'online-game', player-count='2'`, `Event 'credit', currency='coins' cause='game-reward' amount='10'`. `BIM_NETLOG` shows **no** request to any analytics host during launch, a match or a reward, so either it batches elsewhere or it is compiled without a key |
 | Screen rotation | `Info.plist` (portrait only) | **unverified on hardware** | the plist declares portrait only; upstream is portrait too, so this is a deliberate lock, not a port |
 | Background / foreground | `ax::Director` pause path | **unverified** | nothing has stopped and resumed this app on a real phone |
 
@@ -54,9 +55,9 @@ in this port called it and the result was observed.
 | Endpoint | Used by | Status |
 |---|---|---|
 | `/client/authenticate` | launch | exercised — account created, nickname returned |
-| `/client/me` | launch | exercised |
-| `/client/config` | launch | exercised — `fetch_config_job Config updated.` in the log of 2026-11-23; one earlier session got a 403, so the endpoint is inconsistent rather than denied |
-| `/client/game-feature/assign-slots` | features screen | exercised — four slots with prices |
+| `/client/me` | launch | exercised — 200 with user_id, nickname, coins |
+| `/client/config` | launch | exercised — `POST … /client/config` → **200**, body carries `most_recent_version` and the feature catalogue (`03_evidence/net-log.txt`); one earlier session saw a 403 |
+| `/client/game-feature/assign-slots` | features screen, on change | **not** called when the screen opens (network log); fires only when slots are assigned |
 | `/client/game-feature/buy-slot`, `/buy-feature`, `/clear-slot` | features screen | present, **not exercised** (would spend coins from a live account) |
 | `/client/account/update-nickname` | nickname editor | exercised |
 | `/client/users/profiles`, `/client/transfer-legacy-inventory` | matchmaking / migration | presence only, not exercised |
@@ -70,8 +71,8 @@ multiplayer round trip, and the CI-built artefact.
 
 Verified at source level only, and stated as such: audio, haptics.
 
-Not verified anywhere: a **non-zero** statistics account, analytics delivery, foreground/background,
-device performance, and every purchase path.
+Not verified anywhere: analytics delivery (events exist, no request observed), foreground and
+background, device performance, and every purchase path.
 
 ## How to re-check a row
 

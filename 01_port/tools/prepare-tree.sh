@@ -269,19 +269,19 @@ edit(
 #    does the same thing on the same signal, one second after an opponent arrives.
 edit(
     "apps/axmol/main/src/bim/axmol/app/screen/matchmaking.cpp",
-    """  m_controls->ready_button->connect_to_clicked(
-      [this]()
-        {
-          accept_game();
-        });""",
-    """  m_controls->ready_button->connect_to_clicked(
-      [this]()
-        {
-          accept_game();
-        });
+    """  update_nicknames(players);
+
+  const std::size_t player_count = players.size();""",
+    """  update_nicknames(players);
+
+  const std::size_t player_count = players.size();
 
 #if BIM_TEST_SEAMS
-  if (std::getenv("BIM_AUTOFIGHT") != nullptr)
+  // Accept only once an opponent is actually in the proposal. Scheduling this from the
+  // constructor fired it a second after the screen opened, when the encounter id is still 0,
+  // and the exchange logged "idle -> accept_random is not a valid transition" twice per run.
+  if ((player_count >= 2) && (!m_launch_monitor->is_launch_state())
+      && (std::getenv("BIM_AUTOFIGHT") != nullptr))
     ax::Director::getInstance()->getScheduler()->schedule(
         [this](float) { accept_game(); }, this, 0.f, 0, 1.f, false,
         "port-autofight");

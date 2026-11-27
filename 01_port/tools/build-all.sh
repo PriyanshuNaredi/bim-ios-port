@@ -211,7 +211,11 @@ stage_iscool()
     python3 "$patch" "$analysis/iscool-core"
   done
 
-  say "iscool-core: configuring"
+  # The seams live in this library too (the net log), so it has to be built with the same
+  # BIM_TEST_SEAMS as the app. Default 0: a dependency stack built for a release must never
+  # carry the seams. Instrument a simulator build with BIM_TEST_SEAMS=1, and note that
+  # make-ipa.sh refuses to package a binary that still contains them.
+  say "iscool-core: configuring (test seams: ${BIM_TEST_SEAMS:-0})"
   cmake -S "$analysis/iscool-core/build-scripts/cmake" -B "$build/iscool-ios-$archs" -G Ninja \
     -DCMAKE_MAKE_PROGRAM="$ninja" \
     -DCMAKE_TOOLCHAIN_FILE="$axmol/1k/ios.cmake" \
@@ -227,6 +231,7 @@ stage_iscool()
     -DIOS_SDK_VERSION="$ios_sdk_version" \
     -DUSE_DEFAULT_JSONCPP=ON -DISCOOL_TEST_ENABLED=0 \
     -DISCOOL_CORE_WITH_CMAKE_PACKAGE=ON \
+    "-DCMAKE_CXX_FLAGS=-DBIM_TEST_SEAMS=${BIM_TEST_SEAMS:-0}" \
     >"$logs/iscool-ios-configure.log" 2>&1
   say "iscool-core: building"
   cmake --build "$build/iscool-ios-$archs" --parallel "$jobs" \

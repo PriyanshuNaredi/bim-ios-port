@@ -3,14 +3,13 @@
 Ordered by what it closes, not by what it looks like. Each item says what will be true afterwards
 and how it is checked; an item with no check is not on this list.
 
-## 1. Non-zero statistics — attempted, no opponent in five minutes
+## 1. Non-zero statistics — done, with a real opponent
 
-**What was done:** launched with `BIM_AUTOPLAY=1 BIM_AUTOFIGHT=1`, watched for five minutes.
-**Result:** the app sat in "Waiting for your opponents…" the whole time (`07_logs/mm-1..13.png`);
-the statistics stay in their zero state. Nothing in the app is at fault — the server had nobody
-queued at 15:14 UTC.
-**What the wait did produce:** the app's own log (`Documents/log.txt`) is readable and full of
-signal — see #3 and #9 below. **Cost of retrying:** five minutes, at a busier hour.
+**What happened:** a retry at 16:58 found an opponent (encounter 4677, game 12165). The match ran
+the full clock; the end-game screen credited 10 coins; `statistics-played.png` then shows Games 1,
+Defeats 1, Victory 0, Draws 0, success rate 0%. Both states of the gauge are now photographed: a
+dash with no games, a percentage with one.
+**Cost:** ~4 minutes of waiting, at an hour when somebody else was queued.
 
 ## 2. `BIM_NETLOG` — see every request the app makes
 
@@ -23,6 +22,15 @@ all three into log lines.
 back to defaults, an analytics POST. Then the inventory rows get statuses with evidence.
 **Cost:** ~1 hour, one rebuild. **Depends on:** nothing.
 
+## 2b. `BIM_NETLOG` — done
+
+`01_port/patches/iscool-core/0005-net-log.patch.py` logs every request and response, with a body
+snippet, at the one function every response passes through. Evidence in
+`03_evidence/net-log.txt`. It corrected two inventory claims in one run: the config endpoint answers
+200 with the feature catalogue, and opening the features screen issues **no** request to
+`/client/game-feature/*`. The seam lives in iscool-core, so that library must be built with the same
+`BIM_TEST_SEAMS` value as the app — `build-all.sh` now passes it and says which.
+
 ## 3. `ic_log` — already correct, drop the caveat
 
 **What the wait showed:** `[2026-11-23 15:14:26][I][new_game_exchange] Got game proposal 3240.` The
@@ -31,7 +39,7 @@ is stale; this build formats correctly.
 **What to do instead:** move the observed severity-`E` lines to the front of the queue — see #9.
 **Cost:** 10 minutes, documentation only.
 
-## 9. Two invalid state transitions, found while waiting
+## 9. Two invalid state transitions — attributed to the seam and fixed
 
 **What the log says, twice:**
 
@@ -49,8 +57,13 @@ than a finger would, and the port is manufacturing its own error.
 **How to tell them apart:** run twice, once with `BIM_AUTOFIGHT` unset and one tap-equivalent
 delay, and diff the log. If the error survives, it is upstream and belongs in the parity notes,
 not in the port.
-**Check:** no severity-`E` lines during a matchmaking round, or a note that upstream does it too.
-**Cost:** ~1 h, no rebuild needed (the log is enough).
+**Verdict:** the port was manufacturing them. `BIM_AUTOFIGHT` was scheduled from the matchmaking
+constructor, so it called `accept_game()` a second after the screen opened — with no opponent and
+`encounter 0` — and again after the game had already launched. Moved into the proposal handler,
+guarded by `player_count >= 2` and `!is_launch_state()`. Re-run: a real match (encounter 4678)
+launched with **zero** severity-`E` lines where the previous run had three.
+**Lesson:** a seam that lives outside the state it manipulates will invent errors that look like
+upstream bugs. Check the seam before filing the bug.
 
 ## 4. Animation timings against REA §3.2
 
