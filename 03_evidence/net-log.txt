@@ -1,0 +1,6 @@
+-> POST /client/config
+-> POST /client/authenticate
+<- 200 POST /client/config
+<- 200 POST /client/authenticate
+-> POST /client/me
+<- 200 POST /client/me
