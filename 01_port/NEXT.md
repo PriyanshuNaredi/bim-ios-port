@@ -26,7 +26,8 @@ back to defaults, an analytics POST. Then the inventory rows get statuses with e
 
 `01_port/patches/iscool-core/0005-net-log.patch.py` logs every request and response, with a body
 snippet, at the one function every response passes through. Evidence in
-`03_evidence/net-log.txt`. It corrected two inventory claims in one run: the config endpoint answers
+the network log (endpoint paths and statuses only - see the note on bodies in the patch header).
+It corrected two inventory claims in one run: the config endpoint answers
 200 with the feature catalogue, and opening the features screen issues **no** request to
 `/client/game-feature/*`. The seam lives in iscool-core, so that library must be built with the same
 `BIM_TEST_SEAMS` value as the app — `build-all.sh` now passes it and says which.

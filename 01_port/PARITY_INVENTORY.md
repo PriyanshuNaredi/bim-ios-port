@@ -21,7 +21,8 @@ Upstream paths are relative to `build/ios-src/` (the prepared tree from `prepare
 Note on the features screen: the prices and the locked/assigned split are server data, so the row
 is evidence that the config and profile endpoints work on iOS. It is **not** evidence for
 `/client/game-feature/*`: the network log shows no request from that family when the screen opens
-(`03_evidence/net-log.txt`), which corrected an earlier claim in this file.
+(the network log, whose raw output was withdrawn from the repository because the first version of
+the seam recorded request bodies), which corrected an earlier claim in this file.
 
 ## Popups — `apps/axmol/main/src/bim/axmol/app/popup/`
 
@@ -56,7 +57,7 @@ in this port called it and the result was observed.
 |---|---|---|
 | `/client/authenticate` | launch | exercised — account created, nickname returned |
 | `/client/me` | launch | exercised — 200 with user_id, nickname, coins |
-| `/client/config` | launch | exercised — `POST … /client/config` → **200**, body carries `most_recent_version` and the feature catalogue (`03_evidence/net-log.txt`); one earlier session saw a 403 |
+| `/client/config` | launch | exercised — `POST /client/config` → **200**, and the returned catalogue is what the features screen lists; one earlier session saw a 403 |
 | `/client/game-feature/assign-slots` | features screen, on change | **not** called when the screen opens (network log); fires only when slots are assigned |
 | `/client/game-feature/buy-slot`, `/buy-feature`, `/clear-slot` | features screen | present, **not exercised** (would spend coins from a live account) |
 | `/client/account/update-nickname` | nickname editor | exercised |

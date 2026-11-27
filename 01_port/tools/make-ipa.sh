@@ -40,10 +40,15 @@ fi
 # No automation in a shipped binary. The seams are compiled out of device builds, so the strings
 # must be absent; if they are here, something built this bundle with BIM_TEST_SEAMS=1 and the
 # app can be driven by an environment variable on someone else's phone.
-if /usr/bin/strings "$app/$name" | /usr/bin/grep -q 'BIM_AUTO'; then
-  printf 'error: %s contains test seams (BIM_AUTO*); rebuild with BIM_TEST_SEAMS=0\n' "$app/$name" >&2
-  exit 1
-fi
+# Every seam name, not a prefix: BIM_NETLOG and BIM_LANGUAGE do not begin with BIM_AUTO, and a
+# check that only knows the AUTO family passes a binary that still logs every request.
+seams='BIM_AUTOPLAY BIM_AUTOFIGHT BIM_AUTORETURN BIM_AUTOPRESS BIM_AUTOEFFECT BIM_AUTOMUTE BIM_AUDIOLOG BIM_AUTOMESSAGE BIM_LANGUAGE BIM_NETLOG'
+for seam in $seams; do
+  if /usr/bin/strings "$app/$name" | /usr/bin/grep -q -- "$seam"; then
+    printf 'error: %s contains the %s seam; rebuild with BIM_TEST_SEAMS=0\n' "$app/$name" "$seam" >&2
+    exit 1
+  fi
+done
 
 printf 'wrote %s (%s bytes)\n' "$ipa" "$(stat -f %z "$ipa")"
 printf 'bundle: %s\n' "$(basename "$app")"

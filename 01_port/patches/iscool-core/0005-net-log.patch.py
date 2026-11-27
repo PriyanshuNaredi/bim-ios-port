@@ -10,8 +10,13 @@ answer, and whether `/client/transfer-legacy-inventory` is ever called.
 This patch writes one line per request and one per response to `$HOME/net.log` when
 `BIM_NETLOG` is set:
 
-    -> POST https://bim-prod.jorge.st/client/authenticate
-    <- 200 https://bim-prod.jorge.st/client/authenticate (148 bytes)
+    -> POST /client/authenticate
+    <- 200 /client/authenticate
+
+**Never the body, and never the query string.** A first version of this seam logged both, and a
+copy of its output reached the repository carrying the session token and device id from
+`/client/authenticate`. Endpoint paths and status codes answer "did the request happen and what
+came back"; bodies answer that too, and also leak credentials into files people commit.
 
 The seam sits at `iscool::http::detail::process_response`, the single point every response
 passes through, and at the two `send_*_request` functions. A request with no matching
@@ -30,7 +35,7 @@ send = root / "modules/core/http/module/src/iscool/http/send.cpp"
 
 text = send.read_text()
 
-if "net_log_body" in text:
+if "net_endpoint" in text:
     print("   net log: already patched")
     sys.exit(0)
 
@@ -43,8 +48,26 @@ helper = '''#include <iscool/http/request.hpp>
 
 namespace iscool::http::detail
 {
-  inline void net_log_body(const char* direction, const request& r, int status,
-                           const char* body, std::size_t size)
+  inline std::string net_endpoint(const std::string& url)
+  {
+    std::string result(url);
+    const std::size_t scheme = result.find("://");
+
+    if (scheme != std::string::npos)
+      result.erase(0, scheme + 3);
+
+    const std::size_t path = result.find('/');
+    result = path == std::string::npos ? std::string("/") : result.substr(path);
+
+    const std::size_t query = result.find('?');
+
+    if (query != std::string::npos)
+      result.erase(query);
+
+    return result;
+  }
+
+  inline void net_log_body(const char* direction, const request& r, int status)
   {
     if (std::getenv("BIM_NETLOG") == nullptr)
       return;
@@ -59,14 +82,12 @@ namespace iscool::http::detail
     const char* const method =
         r.request_type == request::type::get ? "GET" : "POST";
 
-    const std::string snippet(body != nullptr ? std::string(body, size) : std::string());
+    const std::string endpoint(net_endpoint(r.url));
 
     if (status < 0)
-      std::fprintf(f, "-> %s %s %.400s\\n", method, r.url.c_str(),
-                   snippet.c_str());
+      std::fprintf(f, "-> %s %s\\n", method, endpoint.c_str());
     else
-      std::fprintf(f, "<- %d %s %s %.400s\\n", status, method, r.url.c_str(),
-                   snippet.c_str());
+      std::fprintf(f, "<- %d %s %s\\n", status, method, endpoint.c_str());
 
     std::fclose(f);
   }
@@ -85,8 +106,7 @@ text = text.replace(
     anchor_get
     + """
 #if BIM_TEST_SEAMS
-  detail::net_log_body("send", *r, -1, r->body.data(),
-                       r->body.size());
+  detail::net_log_body("send", *r, -1);
 #endif
 """,
     1,
@@ -99,7 +119,7 @@ text = text.replace(
     anchor_post
     + """
 #if BIM_TEST_SEAMS
-  detail::net_log_body("send", *r, -1, r->body.data(), r->body.size());
+  detail::net_log_body("send", *r, -1);
 #endif
 """,
     1,
@@ -114,8 +134,7 @@ text = text.replace(
     """  request_handler& handler = g_handler_pool.get(handler_index);
 
 #if BIM_TEST_SEAMS
-  detail::net_log_body("recv", handler.request, static_cast<int>(r.status),
-                       r.body.data(), r.body.size());
+  detail::net_log_body("recv", handler.request, static_cast<int>(r.status));
 #endif
 
   if (r.status == 200)""",
